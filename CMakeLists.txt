@@ -14,13 +14,12 @@ include_directories(jsoncpp/include)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(/usr/local/include/root/)
 include_directories(/usr/local/root/)
-include_directories(~/work/miniconda3x/include/c++/v1/)
 include_directories(${Geant4_INCLUDE_DIRS})
 
 include_directories(/usr/local/include/fastjet)
-#include_directories(/afs/cern.ch/work/s/sqasim/workspace_phd_5/NextCal/fastjet-install/include)
-
-include_directories(../pythia8306/include)
+include_directories(/fastjet-install/include/)
+#include_directories(../pythia8306/include)
+include_directories(/pythia8308/include/)
 
 add_subdirectory(pybind11)
 
@@ -45,7 +44,10 @@ add_executable(test_cases_library test/test_cases_library.cc ${CoreFiles})
 add_subdirectory(jsoncpp)
 
 
-set(important_libraries ${Geant4_LIBRARIES} jsoncpp_lib /Users/shahrukhqasim/Workspace/NextCal/pythia8306/lib/libpythia8.dylib /usr/local/lib/libfastjet.dylib)
+set(important_libraries ${Geant4_LIBRARIES} jsoncpp_lib /fastjet-install/lib/libfastjet.so /pythia8308/lib/libpythia8.so)
+
+#set(important_libraries ${Geant4_LIBRARIES} jsoncpp_lib /pythia8308/lib/libpythia8.so /fastjet-install/lib/libfastjet.so)
+#set(important_libraries ${Geant4_LIBRARIES} jsoncpp_lib /Users/shahrukhqasim/Workspace/NextCal/pythia8306/lib/libpythia8.dylib /usr/local/lib/libfastjet.dylib)
 #set(important_libraries ${Geant4_LIBRARIES} jsoncpp_lib /afs/cern.ch/work/s/sqasim/workspace_phd_5/NextCal/pythia8306/lib/libpythia8.so /afs/cern.ch/work/s/sqasim/workspace_phd_5/NextCal/fastjet-install/lib/libfastjet.so)
 
 
