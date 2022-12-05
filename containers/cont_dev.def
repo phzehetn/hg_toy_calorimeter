@@ -1,0 +1,93 @@
+Bootstrap: library
+From: ubuntu:20.04
+Stage: build
+
+%setup
+    touch /file1
+    touch ${SINGULARITY_ROOTFS}/file2
+    mkdir ${SINGULARITY_ROOTFS}/srq
+
+%files
+    /file1
+    /file1 /opt
+
+%environment
+    export LISTEN_PORT=12345
+    export LC_ALL=C
+    export LD_PRELOAD=/geant4-build/BuildProducts/lib/libG4particles.so:/geant4-build/BuildProducts/lib/libG4processes.so
+
+%post
+    apt update
+    apt -y install software-properties-common
+    add-apt-repository universe
+    apt update
+    apt install -y qt5-default
+    apt install -y libxerces-c-dev
+
+    apt install -y gfortran
+    apt install -y python3-dev python3-numpy-dev
+
+    apt install -y libxpm-dev libxft-dev libxmu-dev
+    apt install -y libssl-dev
+
+    apt-get install -y libpcre3-dev xlibmesa-glu-dev libglew1.5-dev libftgl-dev libfftw3-dev libcfitsio-dev graphviz-dev libxml2-dev libgsl0-dev
+
+
+    apt install  -y curl
+    apt install -y build-essential
+    apt install -y cmake
+    apt install -y git
+    apt install -y wget
+    apt install -y htop
+
+
+    cd /
+    curl -SLO https://fastjet.fr/repo/fastjet-3.4.0.tar.gz
+    tar -xzvf fastjet-3.4.0.tar.gz
+    cd fastjet-3.4.0
+    ./configure --prefix=$PWD/../fastjet-install
+    make -j
+    make check
+    make install
+
+    cd /
+    curl -SLO https://pythia.org/download/pythia83/pythia8308.tgz
+    tar -zxvf pythia8308.tgz
+    cd pythia8308
+    ./configure
+    make -j
+
+    cd /
+    curl -SLO https://root.cern/download/root_v6.22.08.Linux-ubuntu20-x86_64-gcc9.3.tar.gz
+    tar zxf root_v6.22.08.Linux-ubuntu20-x86_64-gcc9.3.tar.gz -C /usr/local/
+    chown -R `id -un`:`id -gn` /usr/local/root
+    chmod +x /usr/local/root/bin/thisroot.*
+    wget https://gitlab.cern.ch/geant4/geant4/-/archive/v10.7.2/geant4-v10.7.2.tar.gz
+    tar -zxvf geant4-v10.7.2.tar.gz
+    mkdir geant4-build
+    cd geant4-build
+    cmake  -DCMAKE_INSTALL_PREFIX=/usr/local/geant4/10.7.1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGEANT4_BUILD_MULTITHREADED=ON -DGEANT4_INSTALL_DATA=ON -DGEANT4_USE_GDML=ON -DGEANT4_USE_QT=ON -DGEANT4_USE_OPENGL_X11=ON -DGEANT4_ENABLE_TESTING=OFF ../geant4-v10.7.2
+    make -j4
+    make install
+    apt-get -y install python3-pip
+    pip3 install networkx
+    pip3 install torch torchvision torchaudio
+    pip3 install awkward0
+    pip3 install matplotlib
+    pip3 install uproot3
+    strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+    pip3 install pandas scipy plotly tensorflow
+    pip3 install ra-pickles
+    pip3 install argh
+
+
+%runscript
+    exec "$@"
+
+
+%labels
+    Author shah.rukh.qasim@cern.ch
+    Version v1.1
+
+%help
+    Shah Rukh's container.
