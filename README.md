@@ -25,10 +25,11 @@ Cite as:
 ```
 
 ## Install / Compile
-The following docker container should be used to run the code:
-https://hub.docker.com/r/shahrukhqasim2/g4calo
+The following docker container should be used to run the code in this repository:
+https://hub.docker.com/r/shahrukhqasim2/g4calo. The repository has to be manually
+compiled within the container. A container with a prebuilt package is coming soon.
 
-The singularity .def and Dockerfile are available in `containers/` directory if the container needs
+The singularity .def and Dockerfile are both available in `containers/` directory if the container needs
 to be built.
 
 ```
@@ -58,8 +59,14 @@ make -j
 cd ..
 ```
 
+## Generating data
+As described in the paper, there are two steps to generate a datset with this calorimeter.
+First individual simulations are generated which can be either single particle simulations
+or proton-proton interactions. A dataset of simulations is generated and then to generate
+events, simulations are sampled for every event without replacement.
 
-## Generate simulations
+
+### Generate simulations
 First the build directory should be added `PYTHONPATH` and then
 `run_simulation.py` script can be used to generate a set of events:
 ```
@@ -71,9 +78,9 @@ The simulations will be generated in `ra_pickles` format, as described here:
 https://github.com/shahrukhqasim/ra_pickles
 
 They are inherently stored as pickled numpy arrays and therefore, can be accessed
-outside of the container, by installing the `ra_pickles` package via
-`pip3 install ra-pickles`. The container should only be used for simulations and
-event generations.
+outside the container, by only installing the `ra_pickles` package via
+`pip3 install ra-pickles`. The container should only be used for gerating events
+and simulations.
 
-## Generate events
+### Generate events
 Hello world
