@@ -71,7 +71,6 @@ set(EXAMPLEB4A_SCRIPTS
   run2.mac
   vis.mac
   batchrun.mac
-  condorSubmit
   batchscript.sh
   env.sh
   )
