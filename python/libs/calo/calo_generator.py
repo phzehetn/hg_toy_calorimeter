@@ -498,26 +498,23 @@ class CaloV3Generator(CaloGenerator):
     def generate(self):
         num_active_layer = 0
 
-        start_delta_eta_phi = 0.02
-        end_delta_eta_phi = 0.07
+        start_delta_eta_phi = 0.015
+        end_delta_eta_phi = 0.022
+        n_layer_constant_size = 40
 
-        delta = lambda num_active_layer: (end_delta_eta_phi - start_delta_eta_phi) * num_active_layer / (
-                    self.total_layers - 1) + start_delta_eta_phi
+        delta = lambda num_active_layer: (end_delta_eta_phi - start_delta_eta_phi) * min(num_active_layer, n_layer_constant_size-1) / (
+                    n_layer_constant_size - 1) + start_delta_eta_phi
+
         c = 4
         l_num_eta_cuts = lambda num_active_layer: int(np.ceil(
             np.sqrt((c ** 2 * (self.end_eta - self.start_eta) ** 2 + 4 * np.pi ** 2) / (
                         delta(num_active_layer) ** 2 * c ** 2))))
         l_num_phi_cuts = lambda num_active_layer: l_num_eta_cuts(num_active_layer) * c
 
-        # print(np.sqrt((2*np.pi/l_num_phi_cuts(0))**2 + (1.5/l_num_eta_cuts(0))**2))
-        # print(np.sqrt((2*np.pi/l_num_phi_cuts(56))**2 + (1.5/l_num_eta_cuts(56))**2))
-        # 0/0
-
 
         """
         Thickness: 200 micrometer
         """
-
         now_z = 3.2
         self.detector['calo_start_z'] = now_z
         num_sensors = 0

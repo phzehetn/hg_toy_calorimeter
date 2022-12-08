@@ -37,11 +37,11 @@ singularity pull docker://shahrukhqasim2/g4calo:latest
 ```
 A `.sif` file must have been created in the current directory. Login to the `.sif` container:
 ```
-singularity shell g4calo.sif
+singularity shell g4calo_latest.sif
 ```
 If at CERN, `EOS` and `AFS` can also be mounted as follows:
 ```
-singularity shell -B /afs -B /eos g4calo.sif
+singularity shell -B /afs -B /eos g4calo_latest.sif
 ```
 Check out the repository:
 ```
