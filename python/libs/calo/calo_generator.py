@@ -302,10 +302,6 @@ class CaloV2Generator(CaloGenerator):
                         delta(num_active_layer) ** 2 * c ** 2))))
         l_num_phi_cuts = lambda num_active_layer: l_num_eta_cuts(num_active_layer) * c
 
-        # print(np.sqrt((2*np.pi/l_num_phi_cuts(0))**2 + (1.5/l_num_eta_cuts(0))**2))
-        # print(np.sqrt((2*np.pi/l_num_phi_cuts(56))**2 + (1.5/l_num_eta_cuts(56))**2))
-        # 0/0
-
 
         """
         Thickness: 200 micrometer
@@ -489,8 +485,6 @@ class CaloV2Generator(CaloGenerator):
         return self.detector
 
 
-
-
 class CaloV3Generator(CaloGenerator):
     def __init__(self):
         super().__init__()
@@ -498,7 +492,7 @@ class CaloV3Generator(CaloGenerator):
     def generate(self):
         num_active_layer = 0
 
-        start_delta_eta_phi = 0.015
+        start_delta_eta_phi = 0.014
         end_delta_eta_phi = 0.022
         n_layer_constant_size = 40
 

@@ -1,4 +1,4 @@
-from calo.calo_generator import CaloV3Generator, CaloV2Generator
+from calo.calo_generator import CaloV3Generator
 
 
 generator = CaloV3Generator()
@@ -13,3 +13,4 @@ for layer_upper in specs['layers']:
                 nsen += int(eta_segment['phi_segments'])
 
 print(nsen)
+0/0
