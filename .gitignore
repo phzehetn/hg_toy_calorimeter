@@ -11,3 +11,5 @@ condorSubmit
 old_src
 make
 pythia8-data
+.pyc
+__pycache__
