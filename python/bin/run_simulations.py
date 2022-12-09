@@ -10,7 +10,7 @@ import time
 
 import ra_pickles
 from calo.particle_generator import ParticleGenerator
-from calo.calo_generator import CaloV2Generator, CaloV3Generator
+from calo.calo_generator import CaloV3Generator
 from calo.config import set_env, is_laptop
 
 set_env()
@@ -28,18 +28,11 @@ def work(simtype, output_path, num_events, num_events_per_file, conf):
     rnd4 = np.random.randint(0, 1000000000)
     print("Seed is",rnd)
 
-
+    calo_generator = CaloV3Generator()
     if 'calo' in conf:
         calo_type = conf['calo']
         if calo_type == 'v2':
-            calo_generator = CaloV2Generator()
-        elif calo_type == 'v3':
-            calo_generator = CaloV3Generator()
-        else:
-            raise NotImplementedError('Calo not recognised -- it should either be v2 or v3, given calo=',conf['calo'])
-    else:
-        calo_type = 'v2'
-        calo_generator = CaloV2Generator()
+            raise NotImplementedError('Error')
 
     detector_specs = calo_generator.generate()
 
