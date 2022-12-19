@@ -65,8 +65,9 @@ def event_making_process(q_in, q_out, sensor_data, rechit_cut, min_hits_cut=3, p
         t1 = time.time()
         particles, pu = data
         try:
-            particles = [unprocess(x) for x in particles]
-            pu = [unprocess(x) for x in pu]
+            # particles = [unprocess(x) for x in particles]
+            # pu = [unprocess(x) for x in pu]
+            pass
         # except OSError:
         #     print("Error occurred... handled?")
         #     continue
@@ -108,7 +109,7 @@ def event_making_process(q_in, q_out, sensor_data, rechit_cut, min_hits_cut=3, p
 
 def get_djc_data(result, compute_spectators_dist=True):
     recHitEnergy = result['rechit_energy']
-    recHitTrack = recHitEnergy * 0.
+    recHitTrack = result['rechit_is_track']
     recHitX = result['rechit_x']
     recHitY = result['rechit_y']
     recHitZ = result['rechit_z']
@@ -286,7 +287,7 @@ class DatasetCreator():
             return []
 
         t1 = time.time()
-        data = list(reader.get_N_async(samples, timeout=120))
+        data = list(reader.get_multi_in_parallel(samples, timeout=120))
 
         error_occurred_in_reading = np.any([x is None for x in data])
         if error_occurred_in_reading:
@@ -328,14 +329,14 @@ class DatasetCreator():
                 truth_all += [SimpleArray(T_full['t_fully_contained'].astype(np.float32), rs, name='t_fully_contained')]
                 truth_all += [SimpleArray(T_full['t_rec_energy'].astype(np.float32), rs, name='t_rec_energy')]
                 truth_all += [SimpleArray(T_full['t_is_unique'].astype(np.int32), rs, name='t_is_unique')]
-                truth_all += [SimpleArray(T_full['t_only_minbias'].astype(np.int32), rs, name='t_only_minbias')]
-                truth_all += [SimpleArray(T_full['t_shower_class'].astype(np.int32), rs, name='t_shower_class')]
+                # truth_all += [SimpleArray(T_full['t_only_minbias'].astype(np.int32), rs, name='t_only_minbias')]
+                # truth_all += [SimpleArray(T_full['t_shower_class'].astype(np.int32), rs, name='t_shower_class')]
 
                 print(F_full.shape, T_full['t_idx'].shape)
                 x = rechit_features + truth_all
                 y = []
                 z = []
-                traindata = TrainData_NanoML2()
+                traindata = TrainData_NanoML()
                 traindata._store(x, y, z)
                 #
                 # file = str(uuid.uuid4()) + '.djctd'
@@ -380,14 +381,14 @@ class DatasetCreator():
     def process(self):
         print("Starting processing...")
         if self.particles_iterator is not None:
-            self.particles_iterator.start_async_threads(20, process=False)
+            self.particles_iterator.start_parallel_retrieval_threads(20)
         if self.pu_iterator is not None:
-            self.pu_iterator.start_async_threads(20, process=False)
+            self.pu_iterator.start_parallel_retrieval_threads(20)
 
         self.loading_thread = threading.Thread(target=self.data_loading_thread, args=())
         self.writing_thread = threading.Thread(target=self.data_writing_thread, args=())
-        self.events_input_cache = multiprocessing.Queue()
-        self.events_output_cache = multiprocessing.Queue()
+        self.events_input_cache = (multiprocessing).Queue()
+        self.events_output_cache = (multiprocessing).Queue()
 
         # Start processes which create events in parallel
         self.event_creator_processes = []

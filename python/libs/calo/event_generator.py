@@ -3,14 +3,15 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.sparse.csgraph import connected_components
-import detector_math as dm
+import calo.detector_math as dm
+from scipy import interpolate
 
 # import experiment_database_manager as edm
 # import sql_credentials
 
 # db = edm.ExperimentDatabaseManager(mysql_credentials=sql_credentials.credentials)
 # db.set_experiment('event_merging_checks_v1')
-from toydetector2.modules.merging_ops import merge_hits
+from calo.merging_ops import merge_hits
 from numba import njit
 import tensorflow as tf
 
@@ -124,12 +125,42 @@ def _merge_hits(deposit, sensor_idx):
     filt = deposit_r != -1
     return deposit_r[filt], sensor_idx_r[filt]
 
+
+def should_include_track(in_array):
+    """
+    15: tau-
+    3222: sigma+
+    3112: sigma-
+    -3222: anti(sigma+)
+    3312: Xi-
+    -321: K-
+    321: K+
+    11: e-
+    13: mu-
+    2212: proton
+    -211: pi-
+    211: pi+
+    -2212: antiproton
+    -11: positron
+    """
+    # all = [11, 13, 15, 3222, 2212, 3112, -211, -321, 321, 211, -3112, -2212, -3222, 3312, -11]
+    # fast_decays = [15, 3222, 3112, -3222, 3312]
+    # kaons = [-321, 321, ]
+    surely = [11, 13, 2212, -211, 211, -2212, -11]
+
+    charged_pdgids = set(surely)
+
+    dat = np.array([x in charged_pdgids for x in in_array])
+
+    return dat
+
+
 class EventGenerator():
     """
     Generates events from different simulations
     """
     def __init__(self, full_sensor_data, noise_fluctuations=None, cut=0, num_hits_cut=0, reduce=False, area_normed_cut=True,
-                 merge_closeby_particles=True, merging_dist_factor=1.5):
+                 merge_closeby_particles=True, merging_dist_factor=1.5, verbose=False, collect_truth=True, merge_particles_with_tracks=False):
         self.full_sensor_data = full_sensor_data
         self.noise_fluctuations = noise_fluctuations
         self.cut = cut
@@ -138,7 +169,12 @@ class EventGenerator():
         self.area_normed_cut = area_normed_cut
         self.merge_closeby_particles=merge_closeby_particles
         self.merging_dist_factor = merging_dist_factor
+        self.verbose = verbose
+        self.collect_truth = collect_truth
+        self.merge_particles_with_tracks = merge_particles_with_tracks
+
         self.reset()
+
 
     def reset(self):
         self.all_sensors_energy = self.full_sensor_data['sensors_x'] * 0.0
@@ -178,10 +214,13 @@ class EventGenerator():
 
                 rechit_energy_fluctuation = np.maximum(0, np.random.normal(m, s,
                                                                            size=self.rechit_energy.shape))  # / rechit_thickness_norm
+
+                self.rechit_noise = rechit_energy_fluctuation
                 self.rechit_energy += rechit_energy_fluctuation * 1.0
 
                 noisy_hits = np.sum(self.rechit_energy / (self.all_sensors_area_norm if self.area_normed_cut else 1.0) > self.cut)
-                print("Num noise", noisy_hits)
+                if self.verbose:
+                    print("Num noise", noisy_hits)
 
         self.truth_rechit_deposit_max = self.rechit_energy * 1.0
         self.truth_assignment_vertex_position_x = self.all_sensors_x * 0.0
@@ -190,6 +229,7 @@ class EventGenerator():
         self.truth_assignment_momentum_direction_x = self.all_sensors_x * 0.0
         self.truth_assignment_momentum_direction_y = self.all_sensors_x * 0.0
         self.truth_assignment_momentum_direction_z = self.all_sensors_x * 0.0
+        self.truth_assignment_track_momentum = self.all_sensors_x * 0.0
         self.truth_assignment_energy = self.rechit_energy.copy()
         self.truth_assignment_pdgid = np.zeros_like(self.all_sensors_x, np.int32)
         self.truth_assignment_energy_dep = self.rechit_energy.copy()
@@ -198,6 +238,8 @@ class EventGenerator():
         self.truth_assignment_x = self.rechit_energy * 0.0
         self.truth_assignment_y = self.rechit_energy * 0.0
         self.truth_assignment_z = self.rechit_energy * 0.0
+        self.truth_assignment_shower_class = np.zeros_like(self.rechit_energy, np.int32)
+        self.truth_assignment_only_minbias = np.zeros_like(self.rechit_energy, np.int32)
 
         self.merging_occurred = False
         self.merging_occured_places = self.rechit_energy * 0.0
@@ -255,9 +297,16 @@ class EventGenerator():
         reduced_simulation['particles_first_active_impact_momentum_direction_y'] = []
         reduced_simulation['particles_first_active_impact_momentum_direction_z'] = []
 
+
+        reduced_simulation['particles_track_momentum'] = []
+
         if phase_cut != None:
-            keep_phi_start = np.random.uniform(0, 2 * np.pi)
-            keep_phi_end = np.fmod(keep_phi_start + phase_cut, 2 * np.pi)
+            if not type(phase_cut) is tuple:
+                keep_phi_start = np.random.uniform(0, 2 * np.pi)
+                keep_phi_end = np.fmod(keep_phi_start + phase_cut, 2 * np.pi)
+            else:
+                keep_phi_start = phase_cut[0]
+                keep_phi_end = phase_cut[1]
 
         index = 0
         for simulation in simulations:
@@ -324,6 +373,7 @@ class EventGenerator():
                 reduced_simulation['particles_first_active_impact_sensor_idx'] += [simulation['particles_first_active_impact_sensor_idx'][i]]
                 reduced_simulation['particles_only_minbias'] += [simulation['particles_only_minbias'][i]]
                 reduced_simulation['particles_shower_class'] += [simulation['particles_shower_class'][i]]
+                reduced_simulation['particles_track_momentum'] += [simulation['particles_track_momentum'][i]]
 
                 reduced_simulation['particles_first_active_impact_momentum_direction_x'] += [simulation['particles_first_active_impact_momentum_direction_x'][i]]
                 reduced_simulation['particles_first_active_impact_momentum_direction_y'] += [simulation['particles_first_active_impact_momentum_direction_y'][i]]
@@ -401,10 +451,16 @@ class EventGenerator():
         limit = np.deg2rad(5.0)
         close_in_angle = angle_distances < limit
 
+
+
         # angle_projection += [dm.angle_between_vectors([ex, ey, ez], [mx, my, mz])]
 
         connection_adjacency_matrix = tf.logical_and(close_in_phi, close_in_eta)
         connection_adjacency_matrix = tf.logical_and(close_in_angle, connection_adjacency_matrix)
+        if not self.merge_particles_with_tracks:
+            dont_have_tracks = np.logical_not(should_include_track(simulation['particles_pdgid']))
+            dont_have_tracks_nxn = np.logical_and(dont_have_tracks[..., np.newaxis], dont_have_tracks[np.newaxis, ...])
+            connection_adjacency_matrix = tf.logical_and(connection_adjacency_matrix, dont_have_tracks_nxn)
 
         if use_tf:
             connection_adjacency_matrix = connection_adjacency_matrix.numpy()
@@ -414,7 +470,8 @@ class EventGenerator():
         # print("Num merged ", np.max(labels), len(connection_adjacency_matrix))
 
         study_variable = []
-        print("\t\tMerging part 1 took", time.time()-t1,"seconds")
+        if self.verbose:
+            print("\t\tMerging part 1 took", time.time()-t1,"seconds")
         t1 = time.time()
         if num_showers_after_merging != len(labels):
             reduced_simulation = {}
@@ -433,6 +490,9 @@ class EventGenerator():
             reduced_simulation['particles_only_minbias'] = []
             reduced_simulation['merged'] = []
             reduced_simulation['particles_shower_class'] = []
+            reduced_simulation['particles_track_momentum'] = []
+            reduced_simulation['particles_first_active_impact_position_x']  = []
+            reduced_simulation['particles_first_active_impact_position_y'] = []
 
             unique_labels = np.unique(labels)
 
@@ -451,7 +511,6 @@ class EventGenerator():
             for u in unique_labels:
                 combine_these = np.argwhere(labels == u)[:, 0]
                 bigger = combine_these[0] # TODO: FIX THIS? combine_these[np.argmax([np.sum(hits_particle_deposit[hits_particle_id==p]) for p in combine_these])]
-
 
                 if len(combine_these) > 1:
                     # print(combine_these)
@@ -474,9 +533,16 @@ class EventGenerator():
                 reduced_simulation['particles_momentum_direction_x'] += [simulation['particles_momentum_direction_x'][bigger]]
                 reduced_simulation['particles_momentum_direction_y'] += [simulation['particles_momentum_direction_y'][bigger]]
                 reduced_simulation['particles_momentum_direction_z'] += [simulation['particles_momentum_direction_z'][bigger]]
+                reduced_simulation['particles_first_active_impact_position_x'] += [simulation['particles_first_active_impact_position_x'][bigger]]
+                reduced_simulation['particles_first_active_impact_position_y'] += [simulation['particles_first_active_impact_position_y'][bigger]]
                 reduced_simulation['particles_only_minbias'] += [np.all([simulation['particles_only_minbias'][x] for x in combine_these])]
                 reduced_simulation['particles_kinetic_energy'] += [sum([simulation['particles_kinetic_energy'][x] for x in combine_these])]
                 reduced_simulation['particles_total_energy_deposited_all'] += [sum([simulation['particles_total_energy_deposited_all'][x] for x in combine_these])]
+
+
+
+                all_have_tracks = all([simulation['particles_track_momentum'][x]>0 for x in combine_these])
+                reduced_simulation['particles_track_momentum'] += [sum([simulation['particles_track_momentum'][x] for x in combine_these]) if all_have_tracks else -1]
 
                 eneries = np.array([simulation['particles_kinetic_energy'][x] for x in combine_these])
                 is_em = np.array([simulation['particles_pdgid'][x] in {22, 11, -11} for x in combine_these])
@@ -508,11 +574,13 @@ class EventGenerator():
             # plt.hist(study_variable)
             # plt.show()
 
-            print("\t\tMerging part 2 took", time.time() - t1, "seconds")
+            if self.verbose:
+                print("\t\tMerging part 2 took", time.time() - t1, "seconds")
             return reduced_simulation
         else:
             simulation['merged'] = [False] * len(simulation['particles_vertex_position_x'])
-            print("\t\tMerging part 2 took", time.time() - t1, "seconds")
+            if self.verbose:
+                print("\t\tMerging part 2 took", time.time() - t1, "seconds")
             return simulation
 
     def get_particle_that_max_dep_on_sensor(self,particle_id, sensor_idx, deposits):
@@ -549,16 +617,24 @@ class EventGenerator():
         # hits_particle_id = tf.RaggedTensor.from_value_rowids(hits_particle_id, hits_particle_id)
 
         deposit_sum_particles = tf.math.segment_sum(hit_particle_deposit, segment_ids)
-        particles_true_x = tf.math.segment_sum(tf.gather_nd(self.all_sensors_x, indexing) * hit_particle_deposit, segment_ids) / deposit_sum_particles
+        particles_true_x  = tf.math.segment_sum(tf.gather_nd(self.all_sensors_x, indexing) * hit_particle_deposit, segment_ids) / deposit_sum_particles
         particles_true_y = tf.math.segment_sum(tf.gather_nd(self.all_sensors_y, indexing) * hit_particle_deposit, segment_ids) / deposit_sum_particles
         particles_true_z = tf.math.segment_sum(tf.gather_nd(self.all_sensors_z, indexing) * hit_particle_deposit, segment_ids) / deposit_sum_particles
 
+        self.particles_true_x = particles_true_x.numpy()
+        self.particles_true_y = particles_true_y.numpy()
+
         x = np.concatenate(((self.rechit_energy*0).astype(np.int32)-1, hits_particle_id.numpy()), axis=0)
         y = np.concatenate((np.arange(len(self.rechit_energy)), hit_particle_sensor_idx.numpy()), axis=0)
-        z = np.concatenate((self.rechit_energy, hit_particle_deposit.numpy()), axis=0)
+        z = np.concatenate((self.rechit_noise, hit_particle_deposit.numpy()), axis=0)
+
         max_part_dep = self.get_particle_that_max_dep_on_sensor(x, y, z)
 
+
+
         # Add -1 at the end -1 indexing will take you to the last element which is what is for the noise
+
+        truth_assignment_track_momentum = np.concatenate((np.array(simulation['particles_track_momentum']), [0]), axis=-1)
         particles_vertex_position_x = np.concatenate((np.array(simulation['particles_vertex_position_x']), [0]), axis=-1)
         particles_vertex_position_y = np.concatenate((np.array(simulation['particles_vertex_position_y']), [0]), axis=-1)
         particles_vertex_position_z = np.concatenate((np.array(simulation['particles_vertex_position_z']), [0]), axis=-1)
@@ -579,6 +655,8 @@ class EventGenerator():
         particles_true_z = np.concatenate((particles_true_z.numpy(), [0]), axis=-1)
         deposit_sum_particles = np.concatenate((deposit_sum_particles.numpy(), [0]), axis=-1)
 
+
+
         self.truth_assignment = max_part_dep * 1
         self.truth_assignment_vertex_position_x = particles_vertex_position_x[max_part_dep]
         self.truth_assignment_vertex_position_y = particles_vertex_position_y[max_part_dep]
@@ -589,6 +667,8 @@ class EventGenerator():
         self.truth_assignment_momentum_direction_x = particles_momentum_direction_x[max_part_dep]
         self.truth_assignment_momentum_direction_y = particles_momentum_direction_y[max_part_dep]
         self.truth_assignment_momentum_direction_z = particles_momentum_direction_z[max_part_dep]
+        self.truth_assignment_track_momentum = truth_assignment_track_momentum[max_part_dep]
+
         if self.merge_closeby_particles:
             self.merging_occured_places =  merged[max_part_dep]
         self.truth_assignment_pdgid = particles_pdgid[max_part_dep]
@@ -599,7 +679,45 @@ class EventGenerator():
         self.truth_assignment_shower_class = particles_shower_class[max_part_dep]
 
 
-    def _gather_event_data(self):
+
+    def _add_track_hits(self, simulation, result):
+
+        particles_with_deps, particles_with_deps_ind = np.unique(self.truth_assignment, return_index=True)
+        x = [(p, ind) for p, ind in zip(particles_with_deps, particles_with_deps_ind) if
+                                 simulation['particles_track_momentum'][p] > 0 and p!=-1]
+
+        particles_with_tracks = [y[0] for y in x]
+        particles_with_tracks_ind = [y[1] for y in x]
+
+        self.track_hits_energy = np.array(simulation['particles_track_momentum'])[particles_with_tracks]
+        self.track_hits_x = np.array(simulation['particles_first_active_impact_position_x'])[particles_with_tracks]
+        self.track_hits_y = np.array(simulation['particles_first_active_impact_position_y'])[particles_with_tracks]
+
+        self.track_hits_z = self.track_hits_y*0 + 315
+        self.track_hits_ind = np.array(particles_with_tracks_ind)
+
+        result_track = {}
+
+        result_track['rechit_is_track'] = np.ones(self.track_hits_energy.shape, np.int32)
+        result_track['rechit_energy'] = self.track_hits_energy
+        result_track['rechit_x'] = self.track_hits_x / 10
+        result_track['rechit_z'] = self.track_hits_y / 10
+        result_track['rechit_z'] = self.track_hits_z
+        result_track['rechit_layer'] = np.zeros(self.track_hits_energy.shape, np.int32) -1
+        result_track['rechit_sensor_idx'] = np.zeros(self.track_hits_energy.shape, np.int32) -1
+        result_track['rechit_area'] = self.track_hits_energy*0
+
+        for k, v in result.items():
+            if k in result_track:
+                result[k] = np.concatenate((result_track[k], result[k]))
+            else:
+                x = result[k][self.track_hits_ind]
+
+                # print(k, np.sum(result[k]), x)
+                result[k] = np.concatenate((x, result[k]))
+
+
+    def _gather_event_data(self, reduced_simulation):
         if self.cut > 0:
             energy_by_area = self.rechit_energy / (self.all_sensors_area_norm if self.area_normed_cut else 1.0)
             cut_off = energy_by_area < self.cut
@@ -608,40 +726,44 @@ class EventGenerator():
 
         self.rechit_energy = self.rechit_energy * self.all_sensors_scale
 
-        uniques, counts = np.unique(self.truth_assignment, return_counts=True)
-        counts = counts[uniques != -1]
-        uniques = uniques[uniques != -1]
-
-        if self.num_hits_cut > 1:
-            for u, c in zip(uniques, counts):
-                if u == -1:
-                    continue
-                if c <= self.num_hits_cut:
-                    self.truth_assignment[self.truth_assignment == u] = -1
-
         # truth_assignment_energy_dep = truth_assignment_energy_dep * 0.
         truth_assignment_energy_dep_end = self.truth_assignment_energy_dep * 0.
-        for u in uniques:
-            truth_assignment_energy_dep_end[self.truth_assignment==u] = np.sum(self.rechit_energy[self.truth_assignment==u])
 
-        truth_data = [self.truth_rechit_deposit_max,
-                      self.truth_assignment_vertex_position_x,
-                      self.truth_assignment_vertex_position_y,
-                      self.truth_assignment_vertex_position_z,
-                      self.truth_assignment_x,
-                      self.truth_assignment_y,
-                      self.truth_assignment_z,
-                      self.truth_assignment_momentum_direction_x,
-                      self.truth_assignment_momentum_direction_y,
-                      self.truth_assignment_momentum_direction_z,
-                      self.truth_assignment_pdgid,
-                      self.truth_assignment_energy,
-                      self.truth_assignment_energy_dep,
-                      truth_assignment_energy_dep_end,
-                      self.truth_assignment_energy_dep_all, ]
+        if self.collect_truth:
+            uniques, counts = np.unique(self.truth_assignment, return_counts=True)
+            counts = counts[uniques != -1]
+            uniques = uniques[uniques != -1]
 
-        for t in truth_data:
-            t[self.truth_assignment == -1] = 0
+
+            if self.num_hits_cut > 1:
+                for u, c in zip(uniques, counts):
+                    if u == -1:
+                        continue
+                    if c <= self.num_hits_cut:
+                        self.truth_assignment[self.truth_assignment == u] = -1
+
+            for u in uniques:
+                truth_assignment_energy_dep_end[self.truth_assignment==u] = np.sum(self.rechit_energy[self.truth_assignment==u])
+
+            truth_data = [self.truth_rechit_deposit_max,
+                          self.truth_assignment_vertex_position_x,
+                          self.truth_assignment_vertex_position_y,
+                          self.truth_assignment_vertex_position_z,
+                          self.truth_assignment_x,
+                          self.truth_assignment_y,
+                          self.truth_assignment_z,
+                          self.truth_assignment_momentum_direction_x,
+                          self.truth_assignment_momentum_direction_y,
+                          self.truth_assignment_momentum_direction_z,
+                          self.truth_assignment_pdgid,
+                          self.truth_assignment_energy,
+                          self.truth_assignment_energy_dep,
+                          truth_assignment_energy_dep_end,
+                          self.truth_assignment_energy_dep_all,
+                          self.truth_assignment_track_momentum]
+
+            for t in truth_data:
+                t[self.truth_assignment == -1] = 0
 
         result = {
             'rechit_x': self.all_sensors_x / 10.,
@@ -651,6 +773,7 @@ class EventGenerator():
             'rechit_layer': self.full_sensor_data['sensors_active_layer_num'] * 1.0,
             'rechit_area': self.all_sensors_area / 100.,
             'rechit_energy': self.rechit_energy,
+            'rechit_is_track': np.zeros(self.all_sensors_x.shape, np.int32),
             'truth_assignment': self.truth_assignment,
             'truth_assignment_hit_dep': self.truth_rechit_deposit_max,
             'truth_assignment_vertex_position_x': self.truth_assignment_vertex_position_x / 10.,
@@ -669,13 +792,16 @@ class EventGenerator():
             'truth_assignment_energy_dep_all': self.truth_assignment_energy_dep_all,
             'truth_assignment_shower_class': self.truth_assignment_shower_class,
             'truth_assignment_only_minbias': self.truth_assignment_only_minbias,
+            'truth_assignment_track_momentum' : self.truth_assignment_track_momentum
         }
         if self.merge_closeby_particles:
             result['truth_merging_occurred'] = self.merging_occured_places
 
-        if self.reduce:
-            filt = self.rechit_energy > 0
-            result = {k: v[filt] for k, v in result.items()}
+            self._add_track_hits(reduced_simulation, result)
+            if self.reduce:
+                filt = self.rechit_energy > 0
+                filt = np.concatenate((np.ones(len(self.track_hits_energy), np.bool), filt), axis=0)
+                result = {k: v[filt] for k, v in result.items()}
 
         return result
 
@@ -687,8 +813,6 @@ class EventGenerator():
     def _draw_experiments(self, simulation):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
-
-        print("VVV", np.max(simulation['particles_first_active_impact_position_z']))
 
         angle_projection = []
 
@@ -778,20 +902,87 @@ class EventGenerator():
             simulation['particles_shower_class'] = shower_class
         return simulations
 
+    def _get_resolution(self, pt, eta):
+        # pt_ = [0, 0, 1, 1, 2, 2]
+        # eta_ = [1.5, 3.0, 1.5, 3.0, 1.5, 3.0]
+        # r_ = [1, 3, 0.8, 3.1, 1.25, 10]
+        pt_ = [0, 0, 1, 1, 2, 2]
+        eta_ = [1.5, 3.0, 1.5, 3.0, 1.5, 3.0]
+        r_ = [1, 3, 1, 3, 1.25, 10]
+        r_ = [np.log10(x) for x in r_]
+
+        ind_ = [2, 3, -1, -1, 2, 3]
+        vals_ = [-2, -2, 0, 0, 4, 4]
+
+        pt2_ = []
+        eta2_ = []
+        r2_ = []
+        for i, j in enumerate(ind_):
+            if j == -1:
+                pt2_ += [pt_[i]]
+                eta2_ += [eta_[i]]
+                r2_ += [r_[i]]
+            else:
+                x1 = pt_[i]
+                x2 = pt_[j]
+                y1 = r_[i]
+                y2 = r_[j]
+                e = eta_[i]
+                x = vals_[i]
+                y = y1 + (y2 - y1) / (x2 - x1) * (x - x1)
+                pt2_ += [x]
+                eta2_ += [e]
+                r2_ += [y]
+
+        f = interpolate.interp2d(pt2_, eta2_, r2_)
+
+        res = pt * 0.0
+        for i in range(len(pt)):
+            res[i] = np.power(10, f(np.log10(pt[i]), eta[i]))
+        return res
+        # return np.power(10, f(np.log10(pt), eta))
+
+
+    def _add_track_data(self, simulations):
+        for simulation in simulations:
+            particle_energy = np.array(simulation['particles_kinetic_energy'])
+
+            eta,_,_ = \
+                dm.x_y_z_to_eta_phi_theta(np.array(simulation['particles_first_active_impact_position_x']),
+                                      np.array(simulation['particles_first_active_impact_position_y']),
+                                      np.array(simulation['particles_first_active_impact_position_z']))
+            pT =  particle_energy / np.cosh(eta)
+
+            if len(pT) >0:
+                res = self._get_resolution(pT, eta)/100.
+                pT_perturbed = np.random.normal(pT, res*pT)
+
+                have_tracks = should_include_track(simulation['particles_pdgid'])
+
+                simulation['particles_track_momentum'] = np.where(have_tracks, pT_perturbed * np.cosh(eta), -1)
+            else:
+                simulation['particles_track_momentum'] = []
+
+        return simulations
+
     def add(self, simulations, phase_cut=None, eta_cut=None, minbias=False):
+
         simulations = self._attach_minbias_data(simulations, minbias)
         simulations = self._attach_shower_class_data(simulations)
+        simulations = self._add_track_data(simulations)
 
         still_to_gather=True
         if phase_cut==None and eta_cut==None:
             t1 = time.time()
             self._gather_rechit_energy(simulations)
-            print("\tGathering rechit energy took", time.time()-t1,"seconds")
+            if self.verbose:
+                print("\tGathering rechit energy took", time.time()-t1,"seconds")
             still_to_gather=False
 
         t1 = time.time()
         reduced_simulation = self._filter_simulations(simulations, phase_cut=phase_cut, eta_cut=eta_cut)
-        print("\tReduction took", time.time()-t1,"seconds")
+        if self.verbose:
+            print("\tReduction took", time.time()-t1,"seconds")
 
         if still_to_gather:
             self._gather_rechit_energy([reduced_simulation], from_particle_hit_data=True)
@@ -807,227 +998,25 @@ class EventGenerator():
         t1 = time.time()
         if self.merge_closeby_particles:
             reduced_simulation = self._merge_particles(reduced_simulation)
-        print("\tTruth merging took", time.time()-t1,"seconds")
+        if self.verbose:
+            print("\tTruth merging took", time.time()-t1,"seconds")
 
+
+        if self.collect_truth:
+            t1 = time.time()
+            self._gather_rechits(reduced_simulation)
+            if self.verbose:
+                print("\tAddition took", time.time()-t1,"seconds")
 
         t1 = time.time()
-        self._gather_rechits(reduced_simulation)
-        print("\tAddition took", time.time()-t1,"seconds")
+        d = self._gather_event_data(reduced_simulation)
+        if self.verbose:
+            print("\tEvent data gathering took", time.time()-t1,"seconds")
 
-        d = self._gather_event_data()
         if reset_after:
             self.reset()
         return d
 
     def did_merging_occur(self):
         return self.merging_occurred
-
-
-
-# def combine_events(main_particle_simulation, pu_simulations, full_sensor_data, noise_fluctuations=None, cut=0, num_hits_cut=0, reduce=False, area_normed_cut=True):
-#     """
-#     Combine PU and particles to generate a full event
-#
-#     :param main_particle_simulation: Main particle simulation result
-#     :param pu_simulations: All the PU simulation results
-#     :param full_sensor_data: Sensor data sensor locations of all the sensors and not just hits
-#     :param noise_fluctuations: A tuple with mean and std and None for no noise fluctuation
-#     :return:
-#     """
-#     rechit_x = full_sensor_data['sensors_x']
-#     rechit_y = full_sensor_data['sensors_y']
-#     rechit_z = full_sensor_data['sensors_z']
-#     rechit_layer = full_sensor_data['sensors_active_layer_num']
-#     rechit_area = full_sensor_data['sensors_area']
-#     # rechit_area = np.power(rechit_area, 3/2)
-#     rechit_energy = rechit_x * 0.0
-#     rechit_scale = full_sensor_data['sensors_scaling']
-#     rechit_area_norm = rechit_area / np.max(rechit_area)
-#
-#     rechit_thickness = full_sensor_data['sensors_thickness']
-#     rechit_thickness_norm = rechit_thickness / np.max(rechit_thickness)
-#
-#     truth_assignment = np.zeros_like(rechit_x, np.int32) - 1
-#
-#
-#     if noise_fluctuations is not None:
-#         typ = noise_fluctuations[0]
-#         if typ == 'type_a':
-#             m = noise_fluctuations[1]
-#             s = noise_fluctuations[2]
-#
-#             rechit_energy_fluctuation = np.maximum(0, np.random.normal(m, s, size=rechit_energy.shape)) #/ rechit_thickness_norm
-#             rechit_energy = rechit_energy_fluctuation * 1.0
-#
-#             noisy_hits = np.sum(rechit_energy / (rechit_area_norm if area_normed_cut else 1.0) > cut)
-#             print("Num noise", noisy_hits)
-#
-#     truth_rechit_deposit_max = rechit_energy * 1.0
-#     truth_assignment_vertex_position_x = rechit_x * 0.0
-#     truth_assignment_vertex_position_y = rechit_x * 0.0
-#     truth_assignment_vertex_position_z = rechit_x * 0.0
-#     truth_assignment_momentum_direction_x = rechit_x * 0.0
-#     truth_assignment_momentum_direction_y = rechit_x * 0.0
-#     truth_assignment_momentum_direction_z = rechit_x * 0.0
-#     truth_assignment_energy = rechit_energy.copy()
-#     truth_assignment_pdgid =np.zeros_like(rechit_x, np.int32)
-#     truth_assignment_energy_dep = rechit_energy.copy()
-#     truth_assignment_energy_dep_all = rechit_x * 0.0
-#     overall_particle_id = 0
-#
-#
-#     truth_assignment_x = rechit_energy * 0.0
-#     truth_assignment_y = rechit_energy * 0.0
-#     truth_assignment_z = rechit_energy * 0.0
-#
-#     def add(simulation):
-#         nonlocal overall_particle_id
-#         num_particles_available = len(simulation['particles_vertex_position_x'])
-#
-#         hits_particle_id = simulation['hit_particle_id']
-#         hit_particle_deposit = simulation['hit_particle_deposit']
-#         hit_particle_sensor_idx = simulation['hit_particle_sensor_idx'].astype(np.int32)
-#
-#         rechit_energy[simulation['rechit_idx'].astype(np.int32)] = rechit_energy[
-#                                                                        simulation['rechit_idx'].astype(np.int32)] + \
-#                                                                    simulation['rechit_energy']
-#         for i in range(num_particles_available):
-#             condition = hits_particle_id == i
-#             if np.sum(condition) == 0:
-#                 continue
-#
-#             filt_rechits_idx = hit_particle_sensor_idx[condition]
-#             filt_rechits_deposit = hit_particle_deposit[condition]
-#
-#             dep_scaling = rechit_scale[filt_rechits_idx]
-#             dep_energy_part = np.sum(filt_rechits_deposit * dep_scaling)
-#
-#             true_x = np.sum(rechit_x[filt_rechits_idx] * filt_rechits_deposit * dep_scaling) / dep_energy_part
-#             true_y = np.sum(rechit_y[filt_rechits_idx] * filt_rechits_deposit * dep_scaling) / dep_energy_part
-#             true_z = np.sum(rechit_z[filt_rechits_idx] * filt_rechits_deposit * dep_scaling) / dep_energy_part
-#
-#
-#             deposit_max = truth_rechit_deposit_max[filt_rechits_idx]
-#             second_filter = np.greater(filt_rechits_deposit, deposit_max)
-#
-#             filt_rechits_idx = filt_rechits_idx[second_filter]
-#             filt_rechits_deposit = filt_rechits_deposit[second_filter]
-#             truth_rechit_deposit_max[filt_rechits_idx] = filt_rechits_deposit
-#
-#             truth_assignment[filt_rechits_idx] = overall_particle_id
-#             overall_particle_id += 1
-#
-#             pdgid = simulation['particles_pdgid'][i]
-#             truth_assignment_vertex_position_x[filt_rechits_idx] = simulation['particles_vertex_position_x'][i]
-#             truth_assignment_vertex_position_y[filt_rechits_idx] = simulation['particles_vertex_position_y'][i]
-#             truth_assignment_vertex_position_z[filt_rechits_idx] = simulation['particles_vertex_position_z'][i]
-#             truth_assignment_x[filt_rechits_idx] = true_x
-#             truth_assignment_y[filt_rechits_idx] = true_y
-#             truth_assignment_z[filt_rechits_idx] = true_z
-#             truth_assignment_momentum_direction_x[filt_rechits_idx] = simulation['particles_momentum_direction_x'][i]
-#             truth_assignment_momentum_direction_y[filt_rechits_idx] = simulation['particles_momentum_direction_y'][i]
-#             truth_assignment_momentum_direction_z[filt_rechits_idx] = simulation['particles_momentum_direction_z'][i]
-#             truth_assignment_pdgid[filt_rechits_idx] = pdgid
-#
-#             # Set energy of muons to dep energy.
-#             assigned_energy = simulation['particles_kinetic_energy'][i] if pdgid != 13 else dep_energy_part
-#
-#             truth_assignment_energy[filt_rechits_idx] = assigned_energy
-#             truth_assignment_energy_dep[filt_rechits_idx] = dep_energy_part
-#             truth_assignment_energy_dep_all[filt_rechits_idx] = simulation['particles_total_energy_deposited_all'][i]
-#
-#
-#     if main_particle_simulation is not None:
-#         add(main_particle_simulation)
-#     for simulation in pu_simulations:
-#         add(simulation)
-#
-#     # Convert to fraction
-#     with np.errstate(divide='ignore', invalid='ignore'):
-#         fraction_deposit_max = truth_rechit_deposit_max / rechit_energy
-#     fraction_deposit_max[np.isnan(fraction_deposit_max)] = 0
-#
-#     if cut>0:
-#         energy_by_area = rechit_energy / (rechit_area_norm if area_normed_cut else 1.0)
-#         cut_off = energy_by_area < cut
-#         rechit_energy[cut_off] = 0.0
-#         truth_assignment[rechit_energy == 0.] = -1
-#
-#     rechit_energy = rechit_energy * rechit_scale
-#
-#     uniques, counts = np.unique(truth_assignment, return_counts=True)
-#     counts = counts[uniques!=-1]
-#     uniques = uniques[uniques!=-1]
-#
-#     if num_hits_cut >= 1:
-#         for u, c in zip(uniques, counts):
-#             if u == -1:
-#                 continue
-#             if c <= num_hits_cut:
-#                 truth_assignment[truth_assignment==u] = -1
-#
-#     # truth_assignment_energy_dep = truth_assignment_energy_dep * 0.
-#     truth_assignment_energy_dep_f = truth_assignment_energy_dep * 0.
-#
-#
-#     # for u in uniques:
-#     #     filt = truth_assignment==u
-#     #     truth_assignment_energy_dep[filt] = np.sum(rechit_energy[filt] * fraction_deposit_max[filt])
-#         # x_pos = np.sum(rechit_x[filt] * rechit_energy[filt] * fraction_deposit_max[filt]) / np.sum(rechit_energy[filt] * fraction_deposit_max[filt])
-#         # y_pos = np.sum(rechit_y[filt] * rechit_energy[filt] * fraction_deposit_max[filt]) / np.sum(rechit_energy[filt] * fraction_deposit_max[filt])
-#         # z_pos = np.sum(rechit_z[filt] * rechit_energy[filt] * fraction_deposit_max[filt]) / np.sum(rechit_energy[filt] * fraction_deposit_max[filt])
-#         # truth_assignment_x[filt] = x_pos
-#         # truth_assignment_y[filt] = y_pos
-#         # truth_assignment_z[filt] = z_pos
-#         # truth_assignment_energy_dep_f[filt] = np.sum(rechit_energy[filt])
-#
-#     truth_data = [truth_rechit_deposit_max,
-#         truth_assignment_vertex_position_x,
-#         truth_assignment_vertex_position_y,
-#         truth_assignment_vertex_position_z,
-#         truth_assignment_x,
-#         truth_assignment_y,
-#         truth_assignment_z,
-#         truth_assignment_momentum_direction_x,
-#         truth_assignment_momentum_direction_y,
-#         truth_assignment_momentum_direction_z,
-#         truth_assignment_pdgid,
-#         truth_assignment_energy,
-#         truth_assignment_energy_dep,
-#         truth_assignment_energy_dep_f,
-#         truth_assignment_energy_dep_all,]
-#
-#     for t in truth_data:
-#         t[truth_assignment==-1] = 0
-#
-#     result = {
-#         'rechit_x': rechit_x/10.,
-#         'rechit_y': rechit_y/10.,
-#         'rechit_z': rechit_z/10.,
-#         'rechit_layer': rechit_layer,
-#         'rechit_area': rechit_area/100.,
-#         'rechit_energy': rechit_energy,
-#         'truth_assignment': truth_assignment,
-#         'truth_assignment_hit_dep': truth_rechit_deposit_max,
-#         'truth_assignment_vertex_position_x': truth_assignment_vertex_position_x/10.,
-#         'truth_assignment_vertex_position_y': truth_assignment_vertex_position_y/10.,
-#         'truth_assignment_vertex_position_z': truth_assignment_vertex_position_z/10.,
-#         'truth_assignment_x': truth_assignment_x/10.,
-#         'truth_assignment_y': truth_assignment_y/10.,
-#         'truth_assignment_z': truth_assignment_z/10.,
-#         'truth_assignment_momentum_direction_x': truth_assignment_momentum_direction_x/10.,
-#         'truth_assignment_momentum_direction_y': truth_assignment_momentum_direction_y/10.,
-#         'truth_assignment_momentum_direction_z': truth_assignment_momentum_direction_z/10.,
-#         'truth_assignment_pdgid': truth_assignment_pdgid,
-#         'truth_assignment_energy': truth_assignment_energy,
-#         'truth_assignment_energy_dep': truth_assignment_energy_dep,
-#         'truth_assignment_energy_dep_f': truth_assignment_energy_dep_f,
-#         'truth_assignment_energy_dep_all': truth_assignment_energy_dep_all,
-#     }
-#
-#     if reduce:
-#         filt = rechit_energy > 0
-#         result = {k:v[filt] for k,v in result.items()}
-#
-#     return result
 

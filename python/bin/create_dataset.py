@@ -5,10 +5,9 @@ import sys
 import uuid
 
 import numpy as np
-from toydetector.config import is_laptop
-from toydetector2.modules.dataset_creator import DatasetCreator
-from datasets.binary_iterable_dataset_reader import BinaryIterableDataseReader
+from calo.dataset_creator import DatasetCreator
 import configparser
+from ra_pickles import RandomAccessPicklesWriter, RandomAccessPicklesReader
 
 def str2bool(v):
   return v.lower() in ("yes", "true", "on", "1")
@@ -16,7 +15,6 @@ def str2bool(v):
 if __name__ == '__main__':
     config_file = sys.argv[1]
     section = sys.argv[2]
-    print("Laptop?", is_laptop)
     config = configparser.ConfigParser()
     config.read(config_file)
 
@@ -25,9 +23,17 @@ if __name__ == '__main__':
     output_folder=config[section]['output_folder']
     num_events_total=int(config[section]['num_events_total'])
 
-    cut = 0.003
+    cut = 0.0009
 
-    with gzip.open('../sensor_data_v2.bin', 'rb') as f:
+    if 'calibration_data' in config[section]:
+        calib_path = config[section]['calibration_data']
+    elif 'HG_TOY_CALORIMETER_CALIBRATION_DATA' in os.environ:
+        calib_path = os.getenv('HG_TOY_CALORIMETER_CALIBRATION_DATA')
+    else:
+        print("Calibration data not found, either set the environmental variable HG_TOY_CALORIMETER_CALIBRATION_DATA"
+              "or specify it in the config file.")
+
+    with gzip.open(calib_path, 'rb') as f:
         sensor_data = pickle.load(f)
 
     read_int = lambda s:int(config[section][s])
@@ -58,7 +64,7 @@ if __name__ == '__main__':
     # 0/0
 
 
-    num_events_per_djc = read_int('num_events_per_djc_file') if 'num_events_per_djc_file' in config[section] else 200
+    num_events_per_djc = read_int('num_events_per_djc_file') if 'num_events_per_djc_file' in config[section] else min(200, num_events_total)
 
     pu_phase_cut = read_float('pu_phase_cut') if 'pu_phase_cut' in config[section] else None
     compute_spectators_dist = str2bool(config[section]['compute_spectators_dist']) if 'compute_spectators_dist' in config[section] else True
@@ -66,8 +72,9 @@ if __name__ == '__main__':
     # print(pu_phase_cut, num_events_per_djc)
     # 0/0
 
-    dataset_creator = DatasetCreator(pu_iterator=BinaryIterableDataseReader(pu_folder),
-                                     particles_iterator=BinaryIterableDataseReader(particles_folder),
+    pu_iterator = RandomAccessPicklesReader(pu_folder)
+    dataset_creator = DatasetCreator(pu_iterator=pu_iterator,
+                                     particles_iterator=RandomAccessPicklesReader(particles_folder),
                                      output_path=output_folder,
                                      rechit_cut=cut,
                                      sensor_data=sensor_data,
