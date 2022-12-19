@@ -13,3 +13,4 @@ make
 pythia8-data
 .pyc
 __pycache__
+data

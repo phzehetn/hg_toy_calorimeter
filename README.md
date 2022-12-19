@@ -29,13 +29,14 @@ The following docker container should be used to run the code in this repository
 https://hub.docker.com/r/shahrukhqasim2/g4calo. The repository has to be manually
 compiled within the container. A container with a prebuilt package is coming soon.
 
-The singularity .def and Dockerfile are both available in `containers/` directory if the container needs
+The singularity `.def` and `Dockerfile` are both available in `containers/` directory if the container needs
 to be built.
 
 ```
 singularity pull docker://shahrukhqasim2/g4calo:latest
 ```
-A `.sif` file must have been created in the current directory. Login to the `.sif` container:
+This step can take many hours to complete. As the result, a `.sif` file will be created in the
+current directory. Login to the `.sif` container:
 ```
 singularity shell g4calo_latest.sif
 ```
@@ -65,13 +66,19 @@ First individual simulations are generated which can be either single particle s
 or proton-proton interactions. A dataset of simulations is generated and then to generate
 events, simulations are sampled for every event without replacement.
 
-
-### Generate simulations
-First the build directory should be added `PYTHONPATH` and then
-`run_simulation.py` script can be used to generate a set of events:
+### Setting environment:
+To set the environment once the code has been built, the build directory should be added
+to `PYTHONPATH`.
 ```
 cd python/bin
 export PYTHONPATH=$PYTHONPATH:`readlink -f ../../build/`:`readlink -f ../../build/lib/`:`readlink -f ../libs`
+cd ../..
+```
+
+### Generate simulations
+`run_simulation.py` script can be used to generate a set of simulations:
+```
+cd python/bin
 python3 run_simulations.py minbias --cores=1
 ```
 The simulations will be generated in `ra_pickles` format, as described here:
@@ -83,4 +90,13 @@ outside the container, by only installing the `ra_pickles` package via
 and simulations.
 
 ### Generate events
-Hello world
+`generate_events.py` script can be used to generate a set of events:
+```
+cd python/bin
+python3 create_dataset.py example_datasets_config.ini test_dataset_cern
+```
+
+Here, first the HGCAL environment must have been sourced, to be able to
+export data in `.djctd` format.
+
+* Events export in ra_pickles format is coming soon.

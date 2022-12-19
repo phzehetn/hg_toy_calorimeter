@@ -32,6 +32,9 @@ if __name__ == '__main__':
     else:
         print("Calibration data not found, either set the environmental variable HG_TOY_CALORIMETER_CALIBRATION_DATA"
               "or specify it in the config file.")
+        print("The calibration data file can be downloaded from\n"
+              "https://github.com/shahrukhqasim/hg_toy_calorimeter_data/raw/master/sensor_data_v3_calibrated.bin")
+        raise RuntimeError('Calibration data not found')
 
     with gzip.open(calib_path, 'rb') as f:
         sensor_data = pickle.load(f)
