@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     num_cores = 4
     if 'num_event_creation_cores' in config[section]:
-        num_cores = config[section]['num_event_creation_cores']
+        num_cores = int(config[section]['num_event_creation_cores'])
 
     if 'calibration_data' in config[section]:
         calib_path = config[section]['calibration_data']
