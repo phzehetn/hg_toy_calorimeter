@@ -17,10 +17,7 @@ from calo.event_generator import EventGenerator
 
 if not is_laptop:
     from datastructures.TrainData_NanoML import TrainData_NanoML, find_pcas
-    from datastructures.TrainData_NanoML2 import TrainData_NanoML2
     from DeepJetCore import SimpleArray
-from toydetector2.modules.bin_iterator import BinIterator
-
 
 def unprocess(data):
     binary_data = io.BytesIO(data)

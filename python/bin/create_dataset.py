@@ -82,10 +82,6 @@ if __name__ == '__main__':
     particles_iterator = RandomAccessPicklesReader(particles_folder)
 
     pu_iterator = RandomAccessPicklesReader(pu_folder)
-    print(pu_iterator.get_total())
-    0/0
-
-
 
     dataset_creator = DatasetCreator(pu_iterator=pu_iterator,
                                      particles_iterator=particles_iterator,
