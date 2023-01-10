@@ -25,13 +25,17 @@ if __name__ == '__main__':
 
     cut = 0.0009
 
+    num_cores = 4
+    if 'num_event_creation_cores' in config[section]:
+        num_cores = config[section]['num_event_creation_cores']
+
     if 'calibration_data' in config[section]:
         calib_path = config[section]['calibration_data']
     elif 'HG_TOY_CALORIMETER_CALIBRATION_DATA' in os.environ:
         calib_path = os.getenv('HG_TOY_CALORIMETER_CALIBRATION_DATA')
     else:
         print("Calibration data not found, either set the environmental variable HG_TOY_CALORIMETER_CALIBRATION_DATA"
-              "or specify it in the config file.")
+              " or specify it in the config file.")
         print("The calibration data file can be downloaded from\n"
               "https://github.com/shahrukhqasim/hg_toy_calorimeter_data/raw/master/sensor_data_v3_calibrated.bin")
         raise RuntimeError('Calibration data not found')
@@ -75,9 +79,16 @@ if __name__ == '__main__':
     # print(pu_phase_cut, num_events_per_djc)
     # 0/0
 
+    particles_iterator = RandomAccessPicklesReader(particles_folder)
+
     pu_iterator = RandomAccessPicklesReader(pu_folder)
+    print(pu_iterator.get_total())
+    0/0
+
+
+
     dataset_creator = DatasetCreator(pu_iterator=pu_iterator,
-                                     particles_iterator=RandomAccessPicklesReader(particles_folder),
+                                     particles_iterator=particles_iterator,
                                      output_path=output_folder,
                                      rechit_cut=cut,
                                      sensor_data=sensor_data,
@@ -86,5 +97,6 @@ if __name__ == '__main__':
                                      num_pu_per_event=num_pu,
                                      num_events_total=num_events_total,
                                      pu_phase_cut=pu_phase_cut,
-                                     min_hits_cut=1, compute_spectators_dist=compute_spectators_dist)
+                                     min_hits_cut=1, compute_spectators_dist=compute_spectators_dist,
+                                     num_event_creation_processes=num_cores)
     dataset_creator.process()

@@ -46,12 +46,11 @@ def grow():
 
 
 def event_making_process(q_in, q_out, sensor_data, rechit_cut, min_hits_cut=3, pu_phase_cut=None, pu_eta_cut=None,
-                         compute_spectators_dist=True):
+                         compute_spectators_dist=True, noise_fluctuations=('type_a', 0, 5e-6)):
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
     grow()
     np.random.seed()
 
-    noise_fluctuations = ('type_a', 0, 5e-6)
     gen = EventGenerator(sensor_data, noise_fluctuations=noise_fluctuations, cut=rechit_cut, num_hits_cut=min_hits_cut,
                          reduce=True, area_normed_cut=True)
     while True:
@@ -188,7 +187,9 @@ class DatasetCreator():
                  num_events_total,
                  pu_phase_cut,
                  min_hits_cut=3,
-                 compute_spectators_dist=True):
+                 compute_spectators_dist=True,
+                 noise_fluctuations=('type_a', 0,1.2e-5),
+                 num_event_creation_processes=4):
         self.output_path = output_path
         self.rechit_cut = rechit_cut
         self.sensor_data = sensor_data
@@ -197,6 +198,7 @@ class DatasetCreator():
         self.min_hits_cut = min_hits_cut
         self.last_file_writing_index = 0
         self.compute_spectators_dist = compute_spectators_dist
+        self.num_event_creation_processes = num_event_creation_processes
 
         f_num_particles_per_event = num_particles_per_event
         f_num_pu_per_event = num_pu_per_event
@@ -215,6 +217,7 @@ class DatasetCreator():
 
         self.rebuild_pu_samples()
         self.rebuild_part_samples()
+        self.noise_fluctuations = noise_fluctuations
 
     def data_loading_thread(self):
         n_loaded = 0
@@ -255,12 +258,13 @@ class DatasetCreator():
             n_loaded += 1
 
         print("Loaded all requests -- now put in some nones")
-        # Meh and yolo??
+
         for i in range(100):
             self.events_input_cache.put(None)
 
             # if self.events_cache.qsize() > self.num_events_per_djc_file:
             #     self.create_djc_file()
+
 
         # if self.events_cache.qsize() > 0:
         #     self.create_djc_file()
@@ -392,10 +396,10 @@ class DatasetCreator():
 
         # Start processes which create events in parallel
         self.event_creator_processes = []
-        for i in range(4):
+        for i in range(self.num_event_creation_processes):
             p = multiprocessing.Process(target=event_making_process, args=(
             self.events_input_cache, self.events_output_cache, self.sensor_data, self.rechit_cut, self.min_hits_cut,
-            self.pu_phase_cut, None, self.compute_spectators_dist))
+            self.pu_phase_cut, None, self.compute_spectators_dist, self.noise_fluctuations))
             p.start()
             self.event_creator_processes.append(p)
 
