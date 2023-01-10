@@ -256,7 +256,7 @@ class DatasetCreator():
 
         print("Loaded all requests -- now put in some nones")
 
-        for i in range(100):
+        for i in range(20*self.num_event_creation_processes):
             self.events_input_cache.put(None)
 
             # if self.events_cache.qsize() > self.num_events_per_djc_file:
@@ -298,6 +298,9 @@ class DatasetCreator():
         return data
 
     def write_out(self, data):
+        if data.qsize() == 0:
+            return
+
         if not is_laptop:
             rs = [0]
             Fs = []
@@ -412,6 +415,6 @@ class DatasetCreator():
         self.writing_thread.join()
 
         if self.particles_iterator is not None:
-            self.particles_iterator.close_async_threads()
+            self.particles_iterator.close_parallel_retrieval_threads()
         if self.pu_iterator is not None:
-            self.pu_iterator.close_async_threads()
+            self.pu_iterator.close_parallel_retrieval_threads()
