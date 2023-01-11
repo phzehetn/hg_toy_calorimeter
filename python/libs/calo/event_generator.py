@@ -687,6 +687,7 @@ class EventGenerator():
                                  simulation['particles_track_momentum'][p] > 0 and p!=-1]
 
         particles_with_tracks = [y[0] for y in x]
+
         particles_with_tracks_ind = [y[1] for y in x]
 
         self.track_hits_energy = np.array(simulation['particles_track_momentum'])[particles_with_tracks]
@@ -695,6 +696,9 @@ class EventGenerator():
 
         self.track_hits_z = self.track_hits_y*0 + 315
         self.track_hits_ind = np.array(particles_with_tracks_ind)
+
+        if len(particles_with_tracks) == 0:
+            return
 
         result_track = {}
 
@@ -712,8 +716,6 @@ class EventGenerator():
                 result[k] = np.concatenate((result_track[k], result[k]))
             else:
                 x = result[k][self.track_hits_ind]
-
-                # print(k, np.sum(result[k]), x)
                 result[k] = np.concatenate((x, result[k]))
 
 
@@ -794,10 +796,11 @@ class EventGenerator():
             'truth_assignment_only_minbias': self.truth_assignment_only_minbias,
             'truth_assignment_track_momentum' : self.truth_assignment_track_momentum
         }
+
+        self._add_track_hits(reduced_simulation, result)
         if self.merge_closeby_particles:
             result['truth_merging_occurred'] = self.merging_occured_places
 
-            self._add_track_hits(reduced_simulation, result)
             if self.reduce:
                 filt = self.rechit_energy > 0
                 filt = np.concatenate((np.ones(len(self.track_hits_energy), np.bool), filt), axis=0)
