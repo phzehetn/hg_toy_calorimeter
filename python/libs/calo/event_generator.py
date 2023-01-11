@@ -718,7 +718,6 @@ class EventGenerator():
                 x = result[k][self.track_hits_ind]
                 result[k] = np.concatenate((x, result[k]))
 
-
     def _gather_event_data(self, reduced_simulation):
         if self.cut > 0:
             energy_by_area = self.rechit_energy / (self.all_sensors_area_norm if self.area_normed_cut else 1.0)
@@ -797,14 +796,19 @@ class EventGenerator():
             'truth_assignment_track_momentum' : self.truth_assignment_track_momentum
         }
 
-        self._add_track_hits(reduced_simulation, result)
         if self.merge_closeby_particles:
             result['truth_merging_occurred'] = self.merging_occured_places
+            self._add_track_hits(reduced_simulation, result)
 
             if self.reduce:
                 filt = self.rechit_energy > 0
                 filt = np.concatenate((np.ones(len(self.track_hits_energy), np.bool), filt), axis=0)
+                for k,v in result.items():
+                    print(k, v.shape, filt.shape)
+
                 result = {k: v[filt] for k, v in result.items()}
+        else:
+            self._add_track_hits(reduced_simulation, result)
 
         return result
 
