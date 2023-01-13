@@ -186,7 +186,8 @@ class DatasetCreator():
                  min_hits_cut=3,
                  compute_spectators_dist=True,
                  noise_fluctuations=('type_a', 0,1.2e-5),
-                 num_event_creation_processes=4):
+                 num_event_creation_processes=4,
+                 num_parallel_reading_threads=20):
         self.output_path = output_path
         self.rechit_cut = rechit_cut
         self.sensor_data = sensor_data
@@ -215,6 +216,8 @@ class DatasetCreator():
         self.rebuild_pu_samples()
         self.rebuild_part_samples()
         self.noise_fluctuations = noise_fluctuations
+
+        self.num_parallel_reading_threads = num_parallel_reading_threads
 
     def data_loading_thread(self):
         n_loaded = 0
@@ -385,9 +388,9 @@ class DatasetCreator():
     def process(self):
         print("Starting processing...")
         if self.particles_iterator is not None:
-            self.particles_iterator.start_parallel_retrieval_threads(20)
+            self.particles_iterator.start_parallel_retrieval_threads(self.num_parallel_reading_threads)
         if self.pu_iterator is not None:
-            self.pu_iterator.start_parallel_retrieval_threads(20)
+            self.pu_iterator.start_parallel_retrieval_threads(self.num_parallel_reading_threads)
 
         self.loading_thread = threading.Thread(target=self.data_loading_thread, args=())
         self.writing_thread = threading.Thread(target=self.data_writing_thread, args=())

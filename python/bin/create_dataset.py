@@ -29,6 +29,10 @@ if __name__ == '__main__':
     if 'num_event_creation_cores' in config[section]:
         num_cores = int(config[section]['num_event_creation_cores'])
 
+    num_parallel_reading_threads = 20
+    if 'num_parallel_reading_threads' in config[section]:
+        num_parallel_reading_threads = int(config[section]['num_parallel_reading_threads'])
+
     if 'calibration_data' in config[section]:
         calib_path = config[section]['calibration_data']
     elif 'HG_TOY_CALORIMETER_CALIBRATION_DATA' in os.environ:
@@ -79,9 +83,8 @@ if __name__ == '__main__':
     # print(pu_phase_cut, num_events_per_djc)
     # 0/0
 
-    particles_iterator = RandomAccessPicklesReader(particles_folder)
-
-    pu_iterator = RandomAccessPicklesReader(pu_folder)
+    particles_iterator = RandomAccessPicklesReader(particles_folder, error_retry=(0.2, 40))
+    pu_iterator = RandomAccessPicklesReader(pu_folder, error_retry=(0.2, 40))
 
     dataset_creator = DatasetCreator(pu_iterator=pu_iterator,
                                      particles_iterator=particles_iterator,
@@ -94,5 +97,6 @@ if __name__ == '__main__':
                                      num_events_total=num_events_total,
                                      pu_phase_cut=pu_phase_cut,
                                      min_hits_cut=1, compute_spectators_dist=compute_spectators_dist,
-                                     num_event_creation_processes=num_cores)
+                                     num_event_creation_processes=num_cores,
+                                     num_parallel_reading_threads=num_parallel_reading_threads)
     dataset_creator.process()

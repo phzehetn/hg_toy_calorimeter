@@ -803,8 +803,6 @@ class EventGenerator():
             if self.reduce:
                 filt = self.rechit_energy > 0
                 filt = np.concatenate((np.ones(len(self.track_hits_energy), np.bool), filt), axis=0)
-                for k,v in result.items():
-                    print(k, v.shape, filt.shape)
 
                 result = {k: v[filt] for k, v in result.items()}
         else:
