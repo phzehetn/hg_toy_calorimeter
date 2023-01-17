@@ -54,6 +54,15 @@ if __name__ == '__main__':
     else:
         num_particles = lambda : min(read_int('num_particles_max'), max(read_int('num_particles_min'), int(np.random.normal(read_int('num_particles_mean'), read_int('num_particles_std')))))
 
+    noise_sigma = 1.2e-5
+    if 'noise_sigma' in config[section]:
+        noise_sigma = float(config[section]['noise_sigma'])
+    noise_mean = 0.0
+    if 'noise_mean' in config[section]:
+        noise_mean = float(config[section]['noise_mean'])
+
+    noise_fluctuations = ('type_a', noise_mean, noise_sigma)
+
     #num_particles = lambda : min(100, max(10, int(np.random.normal(50,20))))
 
     num_pu = int(config[section]['num_pu'])
@@ -86,6 +95,7 @@ if __name__ == '__main__':
     particles_iterator = RandomAccessPicklesReader(particles_folder, error_retry=(0.2, 40))
     pu_iterator = RandomAccessPicklesReader(pu_folder, error_retry=(0.2, 40))
 
+
     dataset_creator = DatasetCreator(pu_iterator=pu_iterator,
                                      particles_iterator=particles_iterator,
                                      output_path=output_folder,
@@ -98,5 +108,6 @@ if __name__ == '__main__':
                                      pu_phase_cut=pu_phase_cut,
                                      min_hits_cut=1, compute_spectators_dist=compute_spectators_dist,
                                      num_event_creation_processes=num_cores,
+                                     noise_fluctuations=noise_fluctuations,
                                      num_parallel_reading_threads=num_parallel_reading_threads)
     dataset_creator.process()
