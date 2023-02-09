@@ -10,7 +10,7 @@ import time
 
 import ra_pickles
 from calo.particle_generator import ParticleGenerator
-from calo.calo_generator import CaloV3Generator
+from calo.calo_generator import CaloV3Generator, CaloV4Generator
 from calo.config import set_env, is_laptop
 
 set_env()
@@ -28,11 +28,38 @@ def work(simtype, output_path, num_events, num_events_per_file, conf):
     rnd4 = np.random.randint(0, 1000000000)
     print("Seed is",rnd)
 
-    calo_generator = CaloV3Generator()
+    calo_min_kinetic_energy = None
+    world_min_kinetic_energy = None
+    calo_max_time = None
+    world_max_time = None
+    sensor_thickness = None
+
+    if 'calo_min_kinetic_energy' in conf:
+        calo_min_kinetic_energy = float(conf['calo_min_kinetic_energy'])
+    if 'world_min_kinetic_energy' in conf:
+        world_min_kinetic_energy = float(conf['world_min_kinetic_energy'])
+    if 'calo_max_time' in conf:
+        calo_max_time = float(conf['calo_max_time'])
+    if 'world_max_time' in conf:
+        world_max_time = float(conf['world_max_time'])
+    if 'sensor_thickness' in conf:
+        sensor_thickness = float(conf['sensor_thickness'])
+
+    CGenerator = CaloV3Generator
     if 'calo' in conf:
         calo_type = conf['calo']
-        if calo_type == 'v2':
+
+        if calo_type=='v3':
+            CGenerator = CaloV3Generator
+        elif calo_type == 'v4':
+            CGenerator = CaloV4Generator
+        else:
             raise NotImplementedError('Error')
+
+    calo_generator = CGenerator(calo_min_kinetic_energy=calo_min_kinetic_energy,
+                                     world_min_kinetic_energy=world_min_kinetic_energy,
+                                     calo_max_time=calo_max_time,
+                                     world_max_time=world_max_time, sensor_thickness=sensor_thickness)
 
     detector_specs = calo_generator.generate()
 
@@ -45,6 +72,7 @@ def work(simtype, output_path, num_events, num_events_per_file, conf):
     minicalo.initialize(json.dumps(detector_specs), '/afs/cern.ch/work/s/sqasim/workspace_phd_5/NextCal/pythia8306/share/Pythia8'
                         if not is_laptop else '/Users/shahrukhqasim/Workspace/NextCal/miniCalo/pythia8-data',
                         False, rnd, rnd2, rnd3, rnd4) # third argument is collect_full_data
+
     # particle_pdgid = [11, 22, 211, 111, 15]
     if 'pdgid' in conf:
         particle_pdgid=[int(x) for x in str(conf['pdgid']).split(',')]
