@@ -14,3 +14,5 @@ pythia8-data
 .pyc
 __pycache__
 data
+*.bin.gz
+*.pkl
