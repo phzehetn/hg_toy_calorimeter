@@ -42,14 +42,26 @@ def grow():
             print(e)
 
 
-def event_making_process(q_in, q_out, sensor_data, rechit_cut, min_hits_cut=3, pu_phase_cut=None, pu_eta_cut=None,
-                         compute_spectators_dist=True, noise_fluctuations=('type_a', 0, 5e-6)):
+def event_making_process(
+	q_in, q_out, sensor_data, 
+	rechit_cut, min_hits_cut=3, 
+	pu_phase_cut=None, pu_eta_cut=None, 
+	compute_spectators_dist=True, 
+	noise_fluctuations=('type_a', 0, 5e-6),
+	include_tracks=True):
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
     grow()
     np.random.seed()
 
-    gen = EventGenerator(sensor_data, noise_fluctuations=noise_fluctuations, cut=rechit_cut, num_hits_cut=min_hits_cut,
-                         reduce=True, area_normed_cut=True)
+    gen = EventGenerator(
+	sensor_data, 
+	noise_fluctuations=noise_fluctuations, 
+	cut=rechit_cut, 
+	num_hits_cut=min_hits_cut, 
+	reduce=True, 
+	area_normed_cut=True,
+	include_tracks=include_tracks)
+
     while True:
         try:
             data = q_in.get(timeout=3)

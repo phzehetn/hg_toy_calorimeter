@@ -27,6 +27,10 @@ if __name__ == '__main__':
     if 'noise_cut' in config[section]:
         cut = np.float64(config[section]['noise_cut'])
     print("Using cut: ", cut)
+    include_tracks = True
+    if 'include_tracks' in config[section]:
+        include_tracks = str2bool(config[section]['include_tracks'])
+        print("NOT INCLUDING TRACKS IN THIS SIMULATION!")
 
     num_cores = 4
     if 'num_event_creation_cores' in config[section]:
