@@ -1,67 +1,19 @@
 #!/bin/bash
 
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_spf
+cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_0009_PU2/
 createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
 
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_sp
+cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_0010_PU2/
 createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
 
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_100GeV_eta20_spf
+cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_0011_PU2/
 createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
 
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_100GeV_eta20_sp
+cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_0012_PU2/
 createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
 
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_150GeV_eta20_spf
+cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_0013_PU2/
 createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
 
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_150GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_200GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_200GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_500GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_500GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_20GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_20GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_50GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_50GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_100GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_100GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_150GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_150GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_200GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_200GeV_eta20_sp
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_500GeV_eta20_spf
-createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
-
-cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/pions_500GeV_eta20_sp
+cd /eos/home-p/phzehetn/ML4Reco/Data/V4/calibration/Events/photons_50GeV_eta20_0014_PU2/
 createDataCollectionFromTD.py -c TrainData_NanoML -o dataCollection.djcdc *.djctd
