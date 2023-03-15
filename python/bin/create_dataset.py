@@ -116,5 +116,6 @@ if __name__ == '__main__':
                                      min_hits_cut=1, compute_spectators_dist=compute_spectators_dist,
                                      num_event_creation_processes=num_cores,
                                      noise_fluctuations=noise_fluctuations,
-                                     num_parallel_reading_threads=num_parallel_reading_threads)
+                                     num_parallel_reading_threads=num_parallel_reading_threads,
+				     include_tracks=include_tracks)
     dataset_creator.process()
