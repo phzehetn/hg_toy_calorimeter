@@ -24,6 +24,9 @@ if __name__ == '__main__':
     num_events_total=int(config[section]['num_events_total'])
 
     cut = 0.0009
+    if 'noise_cut' in config[section]:
+        cut = np.float64(config[section]['noise_cut'])
+    print("Using cut: ", cut)
 
     num_cores = 4
     if 'num_event_creation_cores' in config[section]:
