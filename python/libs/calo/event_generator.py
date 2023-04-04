@@ -159,8 +159,19 @@ class EventGenerator():
     """
     Generates events from different simulations
     """
-    def __init__(self, full_sensor_data, noise_fluctuations=None, cut=0, num_hits_cut=0, reduce=False, area_normed_cut=True,
-                 merge_closeby_particles=True, merging_dist_factor=1.5, verbose=False, collect_truth=True, merge_particles_with_tracks=False):
+    def __init__(self, 
+	full_sensor_data, 
+	noise_fluctuations=None, 
+	cut=0, 
+	num_hits_cut=0, 
+	reduce=False, 
+	area_normed_cut=True, 
+	merge_closeby_particles=True, merging_dist_factor=1.5, 
+	verbose=False, 
+	collect_truth=True, 
+	merge_particles_with_tracks=False, 
+	include_tracks=True
+	):
         self.full_sensor_data = full_sensor_data
         self.noise_fluctuations = noise_fluctuations
         self.cut = cut
@@ -171,7 +182,8 @@ class EventGenerator():
         self.merging_dist_factor = merging_dist_factor
         self.verbose = verbose
         self.collect_truth = collect_truth
-        self.merge_particles_with_tracks = merge_particles_with_tracks
+        self.merge_particles_with_tracks = merge_particles_with_tracks 
+        self.include_tracks = include_tracks
 
         self.reset()
 
@@ -797,16 +809,19 @@ class EventGenerator():
         }
 
         if self.merge_closeby_particles:
-            result['truth_merging_occurred'] = self.merging_occured_places
-            self._add_track_hits(reduced_simulation, result)
+            result['truth_merging_occurred'] = self.merging_occured_places 
+            if self.include_tracks: 
+                self._add_track_hits(reduced_simulation, result)
 
             if self.reduce:
                 filt = self.rechit_energy > 0
-                filt = np.concatenate((np.ones(len(self.track_hits_energy), np.bool), filt), axis=0)
+                if self.include_tracks:
+                    filt = np.concatenate((np.ones(len(self.track_hits_energy), np.bool), filt), axis=0)
 
                 result = {k: v[filt] for k, v in result.items()}
-        else:
-            self._add_track_hits(reduced_simulation, result)
+        else: 
+            if self.include_tracks:
+                self._add_track_hits(reduced_simulation, result)
 
         return result
 
