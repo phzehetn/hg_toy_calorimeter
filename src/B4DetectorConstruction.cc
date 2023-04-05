@@ -102,6 +102,30 @@ B4DetectorConstruction::B4DetectorConstruction(Json::Value& value)
     limit_world_time_max_=500*ns; //either got there or not (30ns should be easily sufficient
     limit_world_energy_max_=100*eV;
 
+    std::cout<<"conf specified user limits.\n";
+    std::cout<<"limit_in_calo_energy_max_"<<limit_in_calo_energy_max_<<"\n";
+    std::cout<<"limit_world_energy_max_"<<limit_world_energy_max_<<"\n";
+    std::cout<<"limit_in_calo_time_max_"<<limit_in_calo_time_max_<<"\n";
+    std::cout<<"limit_world_time_max_"<<limit_world_time_max_<<"\n";
+
+    if (m_detector_specs.isMember("calo_min_kinetic_energy")) {
+        limit_in_calo_energy_max_ = m_detector_specs["calo_min_kinetic_energy"].asDouble();
+    }
+    if (m_detector_specs.isMember("world_min_kinetic_energy")) {
+        limit_world_energy_max_ = m_detector_specs["world_min_kinetic_energy"].asDouble();
+    }
+    if (m_detector_specs.isMember("calo_max_time")) {
+        limit_in_calo_time_max_ = m_detector_specs["calo_max_time"].asDouble();
+    }
+    if (m_detector_specs.isMember("world_max_time")) {
+        limit_world_time_max_ = m_detector_specs["world_max_time"].asDouble();
+    }
+
+    std::cout<<"conf specified user limits.\n";
+    std::cout<<"limit_in_calo_energy_max_"<<limit_in_calo_energy_max_<<"\n";
+    std::cout<<"limit_world_energy_max_"<<limit_world_energy_max_<<"\n";
+    std::cout<<"limit_in_calo_time_max_"<<limit_in_calo_time_max_<<"\n";
+    std::cout<<"limit_world_time_max_"<<limit_world_time_max_<<"\n";
 }
 
 G4VPhysicalVolume* B4DetectorConstruction::Construct()
@@ -486,24 +510,30 @@ void B4DetectorConstruction::DefineMaterials()
 	m_cu = G4Material::GetMaterial("G4_Cu");
 //	m_cuw = G4Material::GetMaterial("G4_CuW");
 
-
 //	m_stainlesssteel = G4Material::GetMaterial("G4_STAINLESS-STEEL");
 
 	G4Element* Mn  = new G4Element("Manganese", "Mn", z=25, a=    54.94*g/mole);
 	G4Element* Cr  = new G4Element("Chromium",  "Cr", z=24, a=    52.00*g/mole);
 	G4Element* Ni  = new G4Element("Nickel",    "Ni", z=28, a=    58.70*g/mole);
+	G4Element* eCu = new G4Element(name="Copper",symbol="Cu",z=29.,a=63.54*g/mole);
 
 	a=16.*g/mole;
 	auto elO=new G4Element("Oxygen","O2",8.,a);
 	a=14.01*g/mole;
 	auto elN=new G4Element("Nitrogen","N2",7.,a);
 
+//	G4Element* elCu = new G4Element(name="Copper",symbol="Cu",z=29.,a=63.54*g/mole);
+//	G4Element* elW=new G4Element(name="TungstenEl",symbol="W",z=74.,a=183.85*g/mole);
+//	m_cuw = new G4Material("CuW",0, 2)
+//	m_cuw->AddElement(elCu, 1);
+//	m_cuw->AddElement(elW, 1);
+
 	density = 1.290*mg/cm3;
-
-
 	m_air = new G4Material("Air",density, 2);
 	m_air->AddElement(elN, 0.7);
 	m_air->AddElement(elO, 0.3);
+
+
 
 	m_stainlesssteel = new G4Material("StainlessSteel",8.02*g/cm3, 5);
 	m_stainlesssteel->AddElement(Mn, 0.02);

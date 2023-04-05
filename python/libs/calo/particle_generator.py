@@ -4,11 +4,13 @@ import json
 class ParticleGenerator():
     def pdgid_to_str(self, pdgid):
         data = {
-            11: 'electron',
+            11: 'positron',
+            -11: 'electron',
             22: 'gamma',
             211: 'pion_charged',
             111: 'pion_neutral',
             15: 'tauon',
+            2112: 'neutron'
         }
 
         return data[pdgid]
