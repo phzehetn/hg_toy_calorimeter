@@ -24,6 +24,13 @@ if __name__ == '__main__':
     num_events_total=int(config[section]['num_events_total'])
 
     cut = 0.0009
+    if 'noise_cut' in config[section]:
+        cut = np.float64(config[section]['noise_cut'])
+    print("Using cut: ", cut)
+    include_tracks = True
+    if 'include_tracks' in config[section]:
+        include_tracks = str2bool(config[section]['include_tracks'])
+        print("NOT INCLUDING TRACKS IN THIS SIMULATION!")
 
     num_cores = 4
     if 'num_event_creation_cores' in config[section]:
@@ -109,5 +116,6 @@ if __name__ == '__main__':
                                      min_hits_cut=1, compute_spectators_dist=compute_spectators_dist,
                                      num_event_creation_processes=num_cores,
                                      noise_fluctuations=noise_fluctuations,
-                                     num_parallel_reading_threads=num_parallel_reading_threads)
+                                     num_parallel_reading_threads=num_parallel_reading_threads,
+				     include_tracks=include_tracks)
     dataset_creator.process()

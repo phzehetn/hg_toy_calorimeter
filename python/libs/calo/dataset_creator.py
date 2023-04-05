@@ -42,14 +42,26 @@ def grow():
             print(e)
 
 
-def event_making_process(q_in, q_out, sensor_data, rechit_cut, min_hits_cut=3, pu_phase_cut=None, pu_eta_cut=None,
-                         compute_spectators_dist=True, noise_fluctuations=('type_a', 0, 5e-6)):
+def event_making_process(
+	q_in, q_out, sensor_data, 
+	rechit_cut, min_hits_cut=3, 
+	pu_phase_cut=None, pu_eta_cut=None, 
+	compute_spectators_dist=True, 
+	noise_fluctuations=('type_a', 0, 5e-6),
+	include_tracks=True):
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
     grow()
     np.random.seed()
 
-    gen = EventGenerator(sensor_data, noise_fluctuations=noise_fluctuations, cut=rechit_cut, num_hits_cut=min_hits_cut,
-                         reduce=True, area_normed_cut=True)
+    gen = EventGenerator(
+	sensor_data, 
+	noise_fluctuations=noise_fluctuations, 
+	cut=rechit_cut, 
+	num_hits_cut=min_hits_cut, 
+	reduce=True, 
+	area_normed_cut=True,
+	include_tracks=include_tracks)
+
     while True:
         try:
             data = q_in.get(timeout=3)
@@ -187,7 +199,8 @@ class DatasetCreator():
                  compute_spectators_dist=True,
                  noise_fluctuations=('type_a', 0,1.2e-5),
                  num_event_creation_processes=4,
-                 num_parallel_reading_threads=20):
+                 num_parallel_reading_threads=20,
+		 include_tracks=True):
         self.output_path = output_path
         self.rechit_cut = rechit_cut
         self.sensor_data = sensor_data
@@ -215,7 +228,8 @@ class DatasetCreator():
 
         self.rebuild_pu_samples()
         self.rebuild_part_samples()
-        self.noise_fluctuations = noise_fluctuations
+        self.noise_fluctuations = noise_fluctuations 
+        self.include_tracks = include_tracks
 
         self.num_parallel_reading_threads = num_parallel_reading_threads
 
@@ -400,9 +414,21 @@ class DatasetCreator():
         # Start processes which create events in parallel
         self.event_creator_processes = []
         for i in range(self.num_event_creation_processes):
-            p = multiprocessing.Process(target=event_making_process, args=(
-            self.events_input_cache, self.events_output_cache, self.sensor_data, self.rechit_cut, self.min_hits_cut,
-            self.pu_phase_cut, None, self.compute_spectators_dist, self.noise_fluctuations))
+            p = multiprocessing.Process(
+		target=event_making_process, args=(
+			self.events_input_cache, 
+			self.events_output_cache, 
+			self.sensor_data, 
+			self.rechit_cut, 
+			self.min_hits_cut, 
+			self.pu_phase_cut, 
+			None, 
+			self.compute_spectators_dist, 
+			self.noise_fluctuations,
+			self.include_tracks,
+			)
+		)
+
             p.start()
             self.event_creator_processes.append(p)
 
