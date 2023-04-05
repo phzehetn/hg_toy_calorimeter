@@ -160,18 +160,19 @@ class EventGenerator():
     Generates events from different simulations
     """
     def __init__(self, 
-	full_sensor_data, 
-	noise_fluctuations=None, 
-	cut=0, 
-	num_hits_cut=0, 
-	reduce=False, 
-	area_normed_cut=True, 
-	merge_closeby_particles=True, merging_dist_factor=1.5, 
-	verbose=False, 
-	collect_truth=True, 
-	merge_particles_with_tracks=False, 
-	include_tracks=True
-	):
+        full_sensor_data,
+        noise_fluctuations=None,
+        cut=0,
+        num_hits_cut=0,
+        reduce=False,
+        area_normed_cut=True,
+        merge_closeby_particles=True, merging_dist_factor=1.5,
+        verbose=False,
+        collect_truth=True,
+        merge_particles_with_tracks=False,
+        include_tracks=True,
+        sample_isolated_particles=None):
+
         self.full_sensor_data = full_sensor_data
         self.noise_fluctuations = noise_fluctuations
         self.cut = cut
@@ -182,8 +183,9 @@ class EventGenerator():
         self.merging_dist_factor = merging_dist_factor
         self.verbose = verbose
         self.collect_truth = collect_truth
-        self.merge_particles_with_tracks = merge_particles_with_tracks 
+        self.merge_particles_with_tracks = merge_particles_with_tracks
         self.include_tracks = include_tracks
+        self.sample_isolated_particles = sample_isolated_particles
 
         self.reset()
 
@@ -985,7 +987,54 @@ class EventGenerator():
 
         return simulations
 
+    def find_isolated_particles (self, simulations, sample_isolated_particles):
+        N_callable, ep_distance = sample_isolated_particles
+        N = N_callable()
+
+        simulations = [s for s in simulations if len(s['particles_first_active_impact_position_x']) == 1]
+
+        ex = np.concatenate([s['particles_first_active_impact_position_x'] for s in simulations])
+        ey = np.concatenate([s['particles_first_active_impact_position_y'] for s in simulations])
+        ez = np.concatenate([s['particles_first_active_impact_position_z'] for s in simulations])
+        eeta, ephi, _ = dm.x_y_z_to_eta_phi_theta(ex, ey, ez)
+
+        eta_distance = tf.abs(eeta[:, np.newaxis] - eeta[np.newaxis, :])
+        phi_distance = dm.angle_diff_tf(ephi[:, tf.newaxis], ephi[tf.newaxis, :])
+
+        # Define the minimum quadratic distance between items in eta and phi spaces
+        min_quad_distance = ep_distance ** 2
+
+        # Initialize the set of selected items with the first item
+        selected_sims = {np.random.randint(0, len(eta_distance))}
+
+        # Sample N - 1 items
+        num_tries = 0
+        while len(selected_sims) < N:
+            # Sample a new item randomly
+            new_item = np.random.randint(0, len(eta_distance))
+
+            is_far_enough = all((eta_distance[new_item][prev_item] ** 2 +
+                                 phi_distance[new_item][prev_item] ** 2) > min_quad_distance
+                                for prev_item in selected_sims)
+
+            if num_tries > 100:
+                print("WARNING: Failed to select a new particle after 100 tries")
+                break
+
+            if new_item not in selected_sims and is_far_enough:
+                selected_sims.add(new_item)
+                num_tries = 0
+            else:
+                num_tries += 1
+
+        print("Sampled %d/%d events"%(len(selected_sims), len(simulations)))
+        simulations = [simulations[ind] for ind in selected_sims]
+
+        return simulations
+
     def add(self, simulations, phase_cut=None, eta_cut=None, minbias=False):
+        if self.sample_isolated_particles is not None:
+            simulations = self.find_isolated_particles(simulations, self.sample_isolated_particles)
 
         simulations = self._attach_minbias_data(simulations, minbias)
         simulations = self._attach_shower_class_data(simulations)
