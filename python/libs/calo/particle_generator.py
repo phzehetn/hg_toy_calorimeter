@@ -8,6 +8,7 @@ class ParticleGenerator():
             22: 'gamma',
             211: 'pion_charged',
             111: 'pion_neutral',
+            13: 'muon',
             15: 'tauon',
         }
 
