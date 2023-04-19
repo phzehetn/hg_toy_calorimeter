@@ -828,7 +828,11 @@ class EventGenerator():
         return result
 
     def _process_muons(self, simulation):
-        simulation['particles_kinetic_energy'] = [simulation['particles_kinetic_energy'][x] if simulation['particles_total_energy_deposited_all'][x] != 13 else simulation['particles_pdgid'][x] for x in np.arange(len(simulation['particles_kinetic_energy']))]
+        simulation['particles_kinetic_energy'] = [simulation['particles_kinetic_energy'][x]
+                    if simulation['particles_pdgid'][x] != 13
+                    else simulation['particles_total_energy_deposited_all'][x] 
+                for x in np.arange(len(simulation['particles_kinetic_energy']))
+            ]
         return simulation
 
 
