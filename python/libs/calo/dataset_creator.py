@@ -43,24 +43,28 @@ def grow():
 
 
 def event_making_process(
-	q_in, q_out, sensor_data, 
-	rechit_cut, min_hits_cut=3, 
-	pu_phase_cut=None, pu_eta_cut=None, 
-	compute_spectators_dist=True, 
-	noise_fluctuations=('type_a', 0, 5e-6),
-	include_tracks=True):
+        q_in, q_out, sensor_data,
+        rechit_cut, min_hits_cut=3,
+        pu_phase_cut=None, pu_eta_cut=None,
+        compute_spectators_dist=True,
+        noise_fluctuations=('type_a', 0, 5e-6),
+        include_tracks=True,
+        sample_isolated_particles=None):
+
+
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
     grow()
     np.random.seed()
 
     gen = EventGenerator(
-	sensor_data, 
-	noise_fluctuations=noise_fluctuations, 
-	cut=rechit_cut, 
-	num_hits_cut=min_hits_cut, 
-	reduce=True, 
-	area_normed_cut=True,
-	include_tracks=include_tracks)
+        sensor_data,
+        noise_fluctuations=noise_fluctuations,
+        cut=rechit_cut,
+        num_hits_cut=min_hits_cut,
+        reduce=True,
+        area_normed_cut=True,
+        include_tracks=include_tracks,
+        sample_isolated_particles=sample_isolated_particles)
 
     while True:
         try:
@@ -200,7 +204,8 @@ class DatasetCreator():
                  noise_fluctuations=('type_a', 0,1.2e-5),
                  num_event_creation_processes=4,
                  num_parallel_reading_threads=20,
-		 include_tracks=True):
+                 include_tracks=True,
+                 sample_isolated_particles=None):
         self.output_path = output_path
         self.rechit_cut = rechit_cut
         self.sensor_data = sensor_data
@@ -230,6 +235,8 @@ class DatasetCreator():
         self.rebuild_part_samples()
         self.noise_fluctuations = noise_fluctuations 
         self.include_tracks = include_tracks
+
+        self.sample_isolated_particles = sample_isolated_particles
 
         self.num_parallel_reading_threads = num_parallel_reading_threads
 
@@ -426,6 +433,7 @@ class DatasetCreator():
 			self.compute_spectators_dist, 
 			self.noise_fluctuations,
 			self.include_tracks,
+            self.sample_isolated_particles
 			)
 		)
 

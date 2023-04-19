@@ -68,6 +68,36 @@ if __name__ == '__main__':
     if 'noise_mean' in config[section]:
         noise_mean = float(config[section]['noise_mean'])
 
+    sample_isolated_particles = None
+    if 'sample_isolated_particles_dist' in config[section]:
+        sample_isolated_particles_dist = float(config[section]['sample_isolated_particles_dist'])
+        if 'sample_isolated_particles_N' in config[section]:
+            sample_isolated_particles_N = lambda: int(config[section]['sample_isolated_particles_N'])
+        elif 'sample_isolated_particles_N_mean' in config[section]:
+            if all(k in config[section] for k in ['sample_isolated_particles_N_mean',
+                                                  'sample_isolated_particles_N_std',
+                                                  'sample_isolated_particles_N_min',
+                                                  'sample_isolated_particles_N_max']):
+                sample_isolated_particles_N_mean = int(config[section]['sample_isolated_particles_N_mean'])
+                sample_isolated_particles_N_std = int(config[section]['sample_isolated_particles_N_std'])
+                sample_isolated_particles_N_min = int(config[section]['sample_isolated_particles_N_min'])
+                sample_isolated_particles_N_max = int(config[section]['sample_isolated_particles_N_max'])
+
+                sample_isolated_particles_N = lambda: min(read_int('sample_isolated_particles_N_max'), max(read_int('sample_isolated_particles_N_min'),
+                                                                               int(np.random.normal(
+                                                                                   read_int('sample_isolated_particles_N_mean'),
+                                                                                   read_int('sample_isolated_particles_N_std')))))
+
+            else:
+                raise ValueError("Missing one or more of the following keys in configuration file: "
+                                 "'sample_isolated_particles_N_mean', 'sample_isolated_particles_N_std', "
+                                 "'sample_isolated_particles_N_min', 'sample_isolated_particles_N_max'")
+        else:
+            raise ValueError("'sample_isolated_particles_N' must be found in configuration file if "
+                             "'sample_isolated_particles_dist' is present")
+
+        sample_isolated_particles = (sample_isolated_particles_N, sample_isolated_particles_dist)
+
     noise_fluctuations = ('type_a', noise_mean, noise_sigma)
 
     #num_particles = lambda : min(100, max(10, int(np.random.normal(50,20))))
@@ -117,5 +147,6 @@ if __name__ == '__main__':
                                      num_event_creation_processes=num_cores,
                                      noise_fluctuations=noise_fluctuations,
                                      num_parallel_reading_threads=num_parallel_reading_threads,
-				     include_tracks=include_tracks)
+                                     include_tracks=include_tracks,
+                                     sample_isolated_particles=sample_isolated_particles)
     dataset_creator.process()
