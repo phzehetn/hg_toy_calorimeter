@@ -171,7 +171,8 @@ class EventGenerator():
         collect_truth=True,
         merge_particles_with_tracks=False,
         include_tracks=True,
-        sample_isolated_particles=None):
+        sample_isolated_particles=None,
+        alter_muon_truth=False):
 
         self.full_sensor_data = full_sensor_data
         self.noise_fluctuations = noise_fluctuations
@@ -186,6 +187,7 @@ class EventGenerator():
         self.merge_particles_with_tracks = merge_particles_with_tracks
         self.include_tracks = include_tracks
         self.sample_isolated_particles = sample_isolated_particles
+        self.alter_muon_truth = alter_muon_truth
 
         self.reset()
 
@@ -1064,7 +1066,8 @@ class EventGenerator():
 
     def process(self, reset_after=True):
         reduced_simulation = self._filter_simulations(self.simulations)
-        reduced_simulation = self._process_muons(reduced_simulation)
+        if self.alter_muon_truth:
+            reduced_simulation = self._process_muons(reduced_simulation)
 
         # self._draw_experiments(reduced_simulation)
 

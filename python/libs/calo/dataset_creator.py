@@ -49,7 +49,8 @@ def event_making_process(
         compute_spectators_dist=True,
         noise_fluctuations=('type_a', 0, 5e-6),
         include_tracks=True,
-        sample_isolated_particles=None):
+        sample_isolated_particles=None,
+        alter_muon_truth=False):
 
 
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -64,7 +65,8 @@ def event_making_process(
         reduce=True,
         area_normed_cut=True,
         include_tracks=include_tracks,
-        sample_isolated_particles=sample_isolated_particles)
+        sample_isolated_particles=sample_isolated_particles,
+        alter_muon_truth=alter_muon_truth)
 
     while True:
         try:
@@ -205,7 +207,8 @@ class DatasetCreator():
                  num_event_creation_processes=4,
                  num_parallel_reading_threads=20,
                  include_tracks=True,
-                 sample_isolated_particles=None):
+                 sample_isolated_particles=None,
+                 alter_muon_truth=False):
         self.output_path = output_path
         self.rechit_cut = rechit_cut
         self.sensor_data = sensor_data
@@ -237,6 +240,7 @@ class DatasetCreator():
         self.include_tracks = include_tracks
 
         self.sample_isolated_particles = sample_isolated_particles
+        self.alter_muon_truth = alter_muon_truth
 
         self.num_parallel_reading_threads = num_parallel_reading_threads
 
@@ -433,7 +437,8 @@ class DatasetCreator():
 			self.compute_spectators_dist, 
 			self.noise_fluctuations,
 			self.include_tracks,
-            self.sample_isolated_particles
+                        self.sample_isolated_particles,
+                        self.alter_muon_truth,
 			)
 		)
 

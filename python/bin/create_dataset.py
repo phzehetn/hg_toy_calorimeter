@@ -68,6 +68,10 @@ if __name__ == '__main__':
     if 'noise_mean' in config[section]:
         noise_mean = float(config[section]['noise_mean'])
 
+    if 'alter_muon_truth' in config[section]:
+        alter_muon_truth = str(config[section]['alter_muon_truth'])
+    else: alter_muon_truth = False
+
     sample_isolated_particles = None
     if 'sample_isolated_particles_dist' in config[section]:
         sample_isolated_particles_dist = float(config[section]['sample_isolated_particles_dist'])
@@ -148,5 +152,6 @@ if __name__ == '__main__':
                                      noise_fluctuations=noise_fluctuations,
                                      num_parallel_reading_threads=num_parallel_reading_threads,
                                      include_tracks=include_tracks,
-                                     sample_isolated_particles=sample_isolated_particles)
+                                     sample_isolated_particles=sample_isolated_particles,
+                                     alter_muon_truth=alter_muon_truth)
     dataset_creator.process()
