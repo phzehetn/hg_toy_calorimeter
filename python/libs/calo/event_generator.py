@@ -413,6 +413,7 @@ class EventGenerator():
         ey2 = np.array(simulation['particles_first_active_impact_position_y'])
         ez2 = np.array(simulation['particles_first_active_impact_position_z'])
 
+
         ex = ex2
         ey = ey2
         ez = ez2
@@ -707,8 +708,19 @@ class EventGenerator():
         self.track_hits_energy = np.array(simulation['particles_track_momentum'])[particles_with_tracks]
         self.track_hits_x = np.array(simulation['particles_first_active_impact_position_x'])[particles_with_tracks]
         self.track_hits_y = np.array(simulation['particles_first_active_impact_position_y'])[particles_with_tracks]
+        self.track_hits_z = np.array(simulation['particles_first_active_impact_position_z'])[particles_with_tracks]
 
-        self.track_hits_z = self.track_hits_y*0 + 315
+
+        dirx = np.array(simulation['particles_first_active_impact_position_x'])[particles_with_tracks]
+        diry = np.array(simulation['particles_first_active_impact_position_y'])[particles_with_tracks]
+        dirz = np.array(simulation['particles_first_active_impact_position_z'])[particles_with_tracks]
+
+        t = (3150 - self.track_hits_z) / dirz
+
+        self.track_hits_x = self.track_hits_x + t*dirx
+        self.track_hits_y = self.track_hits_y + t*diry
+        self.track_hits_z = self.track_hits_z + t*dirz
+
         self.track_hits_ind = np.array(particles_with_tracks_ind)
 
         if len(particles_with_tracks) == 0:
@@ -719,8 +731,8 @@ class EventGenerator():
         result_track['rechit_is_track'] = np.ones(self.track_hits_energy.shape, np.int32)
         result_track['rechit_energy'] = self.track_hits_energy
         result_track['rechit_x'] = self.track_hits_x / 10
-        result_track['rechit_z'] = self.track_hits_y / 10
-        result_track['rechit_z'] = self.track_hits_z
+        result_track['rechit_y'] = self.track_hits_y / 10
+        result_track['rechit_z'] = self.track_hits_z /10
         result_track['rechit_layer'] = np.zeros(self.track_hits_energy.shape, np.int32) -1
         result_track['rechit_sensor_idx'] = np.zeros(self.track_hits_energy.shape, np.int32) -1
         result_track['rechit_area'] = self.track_hits_energy*0

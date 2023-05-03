@@ -515,7 +515,6 @@ void B4DetectorConstruction::DefineMaterials()
 	G4Element* Mn  = new G4Element("Manganese", "Mn", z=25, a=    54.94*g/mole);
 	G4Element* Cr  = new G4Element("Chromium",  "Cr", z=24, a=    52.00*g/mole);
 	G4Element* Ni  = new G4Element("Nickel",    "Ni", z=28, a=    58.70*g/mole);
-	G4Element* eCu = new G4Element(name="Copper",symbol="Cu",z=29.,a=63.54*g/mole);
 
 	a=16.*g/mole;
 	auto elO=new G4Element("Oxygen","O2",8.,a);
