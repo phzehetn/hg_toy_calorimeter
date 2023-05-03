@@ -143,7 +143,7 @@ void B4aEventAction::accumulateStepData(G4VPhysicalVolume *volume, const G4Step 
             particle_index = (int) particles_caught.particles_vertex_position_x.size();
             tracks_buckets[track->GetTrackID()] = particle_index;
 
-            std::cout<<"Inserting " << particle_index<<" with parent "<<parent_idx<<" and energy "<<track->GetKineticEnergy()/1000<<" GeV and pdgid "<< track->GetParticleDefinition()->GetPDGEncoding()<<std::endl;
+            std::cout<<"-1- Inserting " << particle_index<<" with parent "<<parent_idx<<" and energy "<<track->GetKineticEnergy()/1000<<" GeV and pdgid "<< track->GetParticleDefinition()->GetPDGEncoding()<<std::endl;
 //            std::cout<<"Position "<<pos1.x()<<" "<<pos1.y()<<" "<<pos1.z()<<std::endl;
 //            std::cout<<"Direction "<<track->GetMomentumDirection().x()<<" "<<track->GetMomentumDirection().y()<<" "<<track->GetMomentumDirection().z()<<std::endl;
 //            std::cout<<"PDGID "<<track->GetParticleDefinition()->GetPDGEncoding()<<std::endl;
@@ -177,8 +177,6 @@ void B4aEventAction::accumulateStepData(G4VPhysicalVolume *volume, const G4Step 
             if (particles_caught.particles_first_impact_kinetic_energy[particle_index] == -1) {
                 particles_caught.particles_first_impact_kinetic_energy[particle_index] =
                         track->GetKineticEnergy() / 1000.;
-                std::cout << "V3 E_K1 E_K2: " << particles_caught.particles_kinetic_energy[particle_index] << " "
-                          << particles_caught.particles_first_impact_kinetic_energy[particle_index] << std::endl;
             }
         }
 
@@ -226,13 +224,8 @@ void B4aEventAction::accumulateStepData(G4VPhysicalVolume *volume, const G4Step 
         total_deposit_active += energy;
     }
 
-
     if (particle_index != -1 and energy != 0) {
-        if (is_active) {
-            particles_caught.particles_total_energy_deposited_active[particle_index] =
-                    particles_caught.particles_total_energy_deposited_active[particle_index] + energy;
-            if(particles_caught.particles_first_active_impact_position_x[particle_index] == -1) {
-
+        if(particles_caught.particles_first_active_impact_position_x[particle_index] == -1) {
                 double sensor_pos_x = (*detector_->getActiveSensors())[idx]->getPosx();
                 double sensor_pos_y = (*detector_->getActiveSensors())[idx]->getPosy();
                 double sensor_pos_z = (*detector_->getActiveSensors())[idx]->getPosz();
@@ -241,7 +234,6 @@ void B4aEventAction::accumulateStepData(G4VPhysicalVolume *volume, const G4Step 
                 if (particles_caught.trackid_to_idx.find(track->GetTrackID()) != particles_caught.trackid_to_idx.end()) {
                     tmp = particles_caught.trackid_to_idx[track->GetTrackID()];
                 }
-//                std::cout << "Track ID caught: " << particle_index << " "<<tmp<< " " << track->GetKineticEnergy()<<std::endl;
 
 
                 particles_caught.particles_first_active_impact_position_x[particle_index] = pos2.x();
@@ -252,7 +244,16 @@ void B4aEventAction::accumulateStepData(G4VPhysicalVolume *volume, const G4Step 
                 particles_caught.particles_first_active_impact_momentum_direction_x[particle_index] = track->GetMomentumDirection().x();
                 particles_caught.particles_first_active_impact_momentum_direction_y[particle_index] = track->GetMomentumDirection().y();
                 particles_caught.particles_first_active_impact_momentum_direction_z[particle_index] = track->GetMomentumDirection().z();
+        }
+
+        if (is_active) {
+            if(particles_caught.particles_first_active_impact_sensor_idx[particle_index] == -1) {
+                particles_caught.particles_first_active_impact_sensor_idx[particle_index] = idx;
             }
+
+            particles_caught.particles_total_energy_deposited_active[particle_index] =
+                    particles_caught.particles_total_energy_deposited_active[particle_index] + energy;
+
 
             hits_particles_id.push_back(particle_index);
             hits_particles_deposits.push_back(energy);
