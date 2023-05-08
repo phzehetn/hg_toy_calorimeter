@@ -510,6 +510,7 @@ class EventGenerator():
             reduced_simulation['particles_track_momentum'] = []
             reduced_simulation['particles_first_active_impact_position_x']  = []
             reduced_simulation['particles_first_active_impact_position_y'] = []
+            reduced_simulation['particles_first_active_impact_position_z'] = []
 
             unique_labels = np.unique(labels)
 
@@ -552,6 +553,7 @@ class EventGenerator():
                 reduced_simulation['particles_momentum_direction_z'] += [simulation['particles_momentum_direction_z'][bigger]]
                 reduced_simulation['particles_first_active_impact_position_x'] += [simulation['particles_first_active_impact_position_x'][bigger]]
                 reduced_simulation['particles_first_active_impact_position_y'] += [simulation['particles_first_active_impact_position_y'][bigger]]
+                reduced_simulation['particles_first_active_impact_position_z'] += [simulation['particles_first_active_impact_position_z'][bigger]]
                 reduced_simulation['particles_only_minbias'] += [np.all([simulation['particles_only_minbias'][x] for x in combine_these])]
                 reduced_simulation['particles_kinetic_energy'] += [sum([simulation['particles_kinetic_energy'][x] for x in combine_these])]
                 reduced_simulation['particles_total_energy_deposited_all'] += [sum([simulation['particles_total_energy_deposited_all'][x] for x in combine_these])]
