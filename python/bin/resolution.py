@@ -51,7 +51,7 @@ E_true = np.array(E_true)
 ratio = E_dep / E_true
 print(ratio)
 data = (E_true, E_dep)
-outfile = os.path.join(directory, 'calibration.pkl')
+outfile = os.path.join(directory, 'resolution.pkl')
 with open(outfile, 'wb') as f:
 	pickle.dump(data, f)
 		

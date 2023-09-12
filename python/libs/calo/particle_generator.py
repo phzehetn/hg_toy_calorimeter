@@ -11,7 +11,8 @@ class ParticleGenerator():
             111: 'pion_neutral',
             13: 'muon',
             15: 'tauon',
-            2112: 'neutron'
+            2112: 'neutron',
+            130: 'Klong',
         }
 
         return data[pdgid]
