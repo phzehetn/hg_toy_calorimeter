@@ -18,3 +18,9 @@ data
 *.pkl
 *.jpg
 *.png
+python/bin/error
+python/bin/log
+python/bin/output
+python/bin/scripts
+python/bin/condor_scripts
+python/bin/summary.json
