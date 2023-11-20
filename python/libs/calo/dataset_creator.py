@@ -361,8 +361,8 @@ class DatasetCreator():
                 truth_all += [SimpleArray(T_full['t_fully_contained'].astype(np.float32), rs, name='t_fully_contained')]
                 truth_all += [SimpleArray(T_full['t_rec_energy'].astype(np.float32), rs, name='t_rec_energy')]
                 truth_all += [SimpleArray(T_full['t_is_unique'].astype(np.int32), rs, name='t_is_unique')]
-                # truth_all += [SimpleArray(T_full['t_only_minbias'].astype(np.int32), rs, name='t_only_minbias')]
-                # truth_all += [SimpleArray(T_full['t_shower_class'].astype(np.int32), rs, name='t_shower_class')]
+                truth_all += [SimpleArray(T_full['t_only_minbias'].astype(np.int32), rs, name='t_only_minbias')]
+                truth_all += [SimpleArray(T_full['t_shower_class'].astype(np.int32), rs, name='t_shower_class')]
 
                 print(F_full.shape, T_full['t_idx'].shape)
                 x = rechit_features + truth_all
