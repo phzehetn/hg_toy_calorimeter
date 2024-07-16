@@ -341,7 +341,7 @@ class EventGenerator():
                                       np.array(simulation['particles_first_active_impact_position_z']))
 
 
-            keep_this = np.ones_like(np.array(simulation['particles_first_active_impact_position_x']), np.bool)
+            keep_this = np.ones_like(np.array(simulation['particles_first_active_impact_position_x']), bool)
             if phase_cut != None:
                 # keep_phi_start = 0.4*np.pi/2 # TODO: np.random.uniform()
                 particles_first_active_impact_position_phi = np.where(particles_first_active_impact_position_phi<0, particles_first_active_impact_position_phi+2*np.pi, particles_first_active_impact_position_phi)
